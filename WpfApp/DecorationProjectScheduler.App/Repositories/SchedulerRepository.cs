@@ -15,6 +15,10 @@ public sealed class SchedulerRepository : ISchedulerRepository
 
     public event EventHandler? DataChanged;
 
+    public bool IsCloudMode => false;
+
+    public bool TestConnection() => true;
+
     public void AddEmployee(string name, string role, string department)
     {
         ExecuteNonQuery("""

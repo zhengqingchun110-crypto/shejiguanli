@@ -274,9 +274,26 @@
                         Background="{DynamicResource AccentSoftBrush}"
                         CornerRadius="18"
                         Padding="14">
-                    <TextBlock Text="内部项目、人员排期和资料归档统一管理。"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Width="10"
+                                     Height="10"
+                                     Fill="{Binding ConnectionIndicatorBrush}"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,8,0" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ConnectionStatusText}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </Grid>
+                        <TextBlock Text="{Binding LastSyncText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>
@@ -299,12 +316,26 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel>
-                            <TextBlock Text="人员管理优先"
-                                       FontSize="34"
-                                       FontWeight="SemiBold" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="人员管理优先"
+                                           FontSize="34"
+                                           FontWeight="SemiBold" />
+                                <Button Grid.Column="1"
+                                        Content="同步"
+                                        MinWidth="96"
+                                        Command="{Binding SyncNowCommand}" />
+                            </Grid>
                             <TextBlock Text="先看公司成员和正在做的工作，再管理项目、巡场、验收与资料。"
+                                        Margin="0,10,0,0"
+                                        TextWrapping="Wrap"
+                                        Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Text="{Binding ConnectionStatusText}"
                                        Margin="0,10,0,0"
-                                       TextWrapping="Wrap"
+                                       FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                         </StackPanel>
 

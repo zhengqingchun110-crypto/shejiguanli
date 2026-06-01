@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Windows.Media;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -222,6 +223,19 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool hasPendingChanges;
 
+    [ObservableProperty]
+    private bool isOnline;
+
+    [ObservableProperty]
+    private string connectionStatusText = "检测中";
+
+    [ObservableProperty]
+    private string lastSyncText = "尚未同步";
+
+    public Brush ConnectionIndicatorBrush => IsOnline
+        ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
+        : new SolidColorBrush(Color.FromRgb(148, 163, 184));
+
     public Visibility OverviewVisibility => IsMenu("总览") ? Visibility.Visible : Visibility.Collapsed;
     public Visibility PeopleVisibility => IsMenu("人员管理") ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ProjectCenterVisibility => IsMenu("项目中心") ? Visibility.Visible : Visibility.Collapsed;
@@ -246,8 +260,27 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Reload()
     {
-        var snapshot = _repository.GetSnapshot();
-        RefreshCollections(snapshot);
+        try
+        {
+            var snapshot = _repository.GetSnapshot();
+            RefreshCollections(snapshot);
+            UpdateConnectionStatus(true);
+        }
+        catch (Exception ex)
+        {
+            UpdateConnectionStatus(false);
+            MessageBox.Show(ex.Message, "同步失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void SyncNow()
+    {
+        Reload();
+        if (IsOnline)
+        {
+            MessageBox.Show("已同步云端数据。", "同步完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     [RelayCommand]
@@ -775,6 +808,18 @@ public partial class MainViewModel : ViewModelBase
     partial void OnEditableProjectOperatorsChanged(string value) => HasPendingChanges = true;
     partial void OnEditableProjectSummaryChanged(string value) => HasPendingChanges = true;
     partial void OnEditableTaskPlanTextChanged(string value) => HasPendingChanges = true;
+
+    partial void OnIsOnlineChanged(bool value) => OnPropertyChanged(nameof(ConnectionIndicatorBrush));
+
+    private void UpdateConnectionStatus(bool requestSucceeded)
+    {
+        var online = !_repository.IsCloudMode || (requestSucceeded && _repository.TestConnection());
+        IsOnline = online;
+        ConnectionStatusText = _repository.IsCloudMode
+            ? online ? "云端在线" : "云端离线"
+            : "本机模式";
+        LastSyncText = online ? $"上次同步 {DateTime.Now:HH:mm:ss}" : "同步失败";
+    }
 
     public bool ConfirmCloseAndSave()
     {

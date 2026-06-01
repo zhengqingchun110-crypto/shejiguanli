@@ -6,7 +6,10 @@ public interface ISchedulerRepository
 {
     event EventHandler? DataChanged;
 
+    bool IsCloudMode { get; }
+
     WorkspaceSnapshot GetSnapshot();
+    bool TestConnection();
     void AddEmployee(string name, string role, string department);
     void DeleteEmployee(int employeeId);
     void CreateProject(string name, string area, string projectType, int managerId, DateTime startDate, DateTime endDate, string summary);

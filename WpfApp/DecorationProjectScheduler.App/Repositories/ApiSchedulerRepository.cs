@@ -20,8 +20,23 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
 
     public event EventHandler? DataChanged;
 
+    public bool IsCloudMode => true;
+
     public WorkspaceSnapshot GetSnapshot() =>
         Send(() => _httpClient.GetFromJsonAsync<WorkspaceSnapshot>("api/workspace", _jsonOptions)) ?? new WorkspaceSnapshot();
+
+    public bool TestConnection()
+    {
+        try
+        {
+            using var response = _httpClient.GetAsync("api/health").GetAwaiter().GetResult();
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     public void AddEmployee(string name, string role, string department) =>
         Post("api/employees", new { name, role, department });
