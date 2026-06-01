@@ -50,12 +50,13 @@ public partial class App : Application
 
         var themeService = new ThemeService();
         var fileStorageService = new FileStorageService(fileRoot);
+        var updateService = new UpdateService(apiBaseUrl);
 
         Resources["FileStorageService"] = fileStorageService;
 
         var mainWindow = new MainWindow
         {
-            DataContext = new MainViewModel(repository, themeService),
+            DataContext = new MainViewModel(repository, themeService, updateService),
             Title = string.IsNullOrWhiteSpace(apiBaseUrl)
                 ? "装饰设计项目与人员排期管理系统 - 本机模式"
                 : "装饰设计项目与人员排期管理系统 - 云端模式"

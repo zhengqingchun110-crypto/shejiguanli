@@ -15,11 +15,13 @@ namespace DecorationProjectScheduler.App.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly ISchedulerRepository _repository;
+    private readonly UpdateService _updateService;
     private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门"];
 
-    public MainViewModel(ISchedulerRepository repository, ThemeService themeService)
+    public MainViewModel(ISchedulerRepository repository, ThemeService themeService, UpdateService updateService)
     {
         _repository = repository;
+        _updateService = updateService;
 
         NavigationItems =
         [
@@ -232,6 +234,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string lastSyncText = "尚未同步";
 
+    [ObservableProperty]
+    private string updateStatusText = "当前版本";
+
     public Brush ConnectionIndicatorBrush => IsOnline
         ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
         : new SolidColorBrush(Color.FromRgb(148, 163, 184));
@@ -280,6 +285,50 @@ public partial class MainViewModel : ViewModelBase
         if (IsOnline)
         {
             MessageBox.Show("已同步云端数据。", "同步完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    [RelayCommand]
+    private async Task CheckUpdate()
+    {
+        if (!_updateService.CanCheckOnline)
+        {
+            MessageBox.Show("当前是本机模式，连接云端后可以检查在线更新。", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            UpdateStatusText = "正在检查更新";
+            var updateInfo = await _updateService.CheckLatestAsync();
+            if (updateInfo is null)
+            {
+                UpdateStatusText = "未获取到版本信息";
+                MessageBox.Show("暂时没有获取到云端版本信息。", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (!updateInfo.HasUpdate)
+            {
+                UpdateStatusText = $"已是最新版本 {updateInfo.CurrentVersion}";
+                MessageBox.Show($"当前已是最新版本：{updateInfo.CurrentVersion}", "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            UpdateStatusText = $"发现新版本 {updateInfo.LatestVersion}";
+            var message = string.IsNullOrWhiteSpace(updateInfo.Notes)
+                ? $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。是否打开下载页面？"
+                : $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。\n\n更新内容：{updateInfo.Notes}\n\n是否打开下载页面？";
+            var result = MessageBox.Show(message, "发现新版本", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (result == MessageBoxResult.Yes)
+            {
+                _updateService.OpenDownload(updateInfo);
+            }
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusText = "更新检查失败";
+            MessageBox.Show(ex.Message, "检查更新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

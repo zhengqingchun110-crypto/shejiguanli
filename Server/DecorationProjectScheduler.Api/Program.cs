@@ -10,12 +10,26 @@ var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseStaticFiles();
 
 var repository = app.Services.GetRequiredService<PostgresSchedulerRepository>();
 await repository.InitializeAsync();
 
 app.MapGet("/", () => Results.Ok(new { status = "ok", name = "设计管理系统 API" }));
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
+app.MapGet("/api/update/latest", (IConfiguration configuration) =>
+{
+    var version = configuration["Update:Version"] ?? "1.0.1";
+    var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
+    var notes = configuration["Update:Notes"] ?? "优化云端同步、在线状态和项目管理体验。";
+
+    return Results.Ok(new
+    {
+        version,
+        downloadUrl,
+        notes
+    });
+});
 app.MapGet("/api/workspace", (PostgresSchedulerRepository repo) => repo.GetSnapshotAsync());
 
 app.MapPost("/api/employees", async (PostgresSchedulerRepository repo, AddEmployeeRequest request) =>
