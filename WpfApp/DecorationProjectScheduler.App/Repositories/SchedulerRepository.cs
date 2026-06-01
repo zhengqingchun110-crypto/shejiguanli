@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 
 namespace DecorationProjectScheduler.App.Repositories;
 
-public sealed class SchedulerRepository
+public sealed class SchedulerRepository : ISchedulerRepository
 {
     private readonly string _connectionString;
 

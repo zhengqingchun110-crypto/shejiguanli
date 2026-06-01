@@ -17,10 +17,28 @@ public partial class App : Application
         var databasePath = Path.Combine(appRoot, "Database", "scheduler.db");
         var fileRoot = Path.Combine(appRoot, "ProjectFiles");
 
-        var initializer = new SqliteInitializer(databasePath);
-        initializer.Initialize();
+        ISchedulerRepository repository;
+        var apiBaseUrl = Environment.GetEnvironmentVariable("SCHEDULER_API_URL");
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            var configPath = Path.Combine(appRoot, "api-url.txt");
+            if (File.Exists(configPath))
+            {
+                apiBaseUrl = File.ReadAllText(configPath).Trim();
+            }
+        }
 
-        var repository = new SchedulerRepository(initializer.ConnectionString);
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            var initializer = new SqliteInitializer(databasePath);
+            initializer.Initialize();
+            repository = new SchedulerRepository(initializer.ConnectionString);
+        }
+        else
+        {
+            repository = new ApiSchedulerRepository(apiBaseUrl);
+        }
+
         var themeService = new ThemeService();
         var fileStorageService = new FileStorageService(fileRoot);
 

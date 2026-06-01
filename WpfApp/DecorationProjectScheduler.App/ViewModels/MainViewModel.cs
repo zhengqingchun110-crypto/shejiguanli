@@ -13,10 +13,10 @@ namespace DecorationProjectScheduler.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly SchedulerRepository _repository;
+    private readonly ISchedulerRepository _repository;
     private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门"];
 
-    public MainViewModel(SchedulerRepository repository, ThemeService themeService)
+    public MainViewModel(ISchedulerRepository repository, ThemeService themeService)
     {
         _repository = repository;
 
