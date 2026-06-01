@@ -15,13 +15,13 @@ app.UseStaticFiles();
 var repository = app.Services.GetRequiredService<PostgresSchedulerRepository>();
 await repository.InitializeAsync();
 
-app.MapGet("/", () => Results.Ok(new { status = "ok", name = "设计管理系统 API" }));
+app.MapGet("/", () => Results.Ok(new { status = "ok", name = "设计项目管理 API" }));
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.1";
+    var version = configuration["Update:Version"] ?? "1.0.3";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "优化云端同步、在线状态和项目管理体验。";
+    var notes = configuration["Update:Notes"] ?? "新增总览下钻、PDF导出、工程监理部门、项目搜索，并修复日期归档与导出稳定性。";
 
     return Results.Ok(new
     {

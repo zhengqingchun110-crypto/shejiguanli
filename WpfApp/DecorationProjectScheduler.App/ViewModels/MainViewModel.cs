@@ -16,7 +16,7 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly ISchedulerRepository _repository;
     private readonly UpdateService _updateService;
-    private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门"];
+    private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门", "工程监理"];
 
     public MainViewModel(ISchedulerRepository repository, ThemeService themeService, UpdateService updateService)
     {
@@ -237,6 +237,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string updateStatusText = "当前版本";
 
+    [ObservableProperty]
+    private DashboardCard? expandedDashboardCard;
+
     public Brush ConnectionIndicatorBrush => IsOnline
         ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
         : new SolidColorBrush(Color.FromRgb(148, 163, 184));
@@ -252,6 +255,9 @@ public partial class MainViewModel : ViewModelBase
     partial void OnSelectedProjectStatusChanged(string value) => ApplyProjectFilters();
     partial void OnProjectSearchKeywordChanged(string value) => ApplyProjectFilters();
     partial void OnSelectedProjectSummaryChanged(ProjectSummary? value) => LoadProjectDetail();
+    partial void OnExpandedDashboardCardChanged(DashboardCard? value) => OnPropertyChanged(nameof(DashboardDetailVisibility));
+
+    public Visibility DashboardDetailVisibility => IsMenu("总览") && ExpandedDashboardCard is not null ? Visibility.Visible : Visibility.Collapsed;
 
     partial void OnSelectedNavigationChanged(NavigationMenuItem? value)
     {
@@ -260,6 +266,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(ProjectCenterVisibility));
         OnPropertyChanged(nameof(NonProjectContentVisibility));
         OnPropertyChanged(nameof(FilesVisibility));
+        OnPropertyChanged(nameof(DashboardDetailVisibility));
     }
 
     [RelayCommand]
@@ -286,6 +293,62 @@ public partial class MainViewModel : ViewModelBase
         {
             MessageBox.Show("已同步云端数据。", "同步完成", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+    }
+
+    [RelayCommand]
+    private void ToggleDashboardCard(DashboardCard? card)
+    {
+        if (card is null)
+        {
+            return;
+        }
+
+        ExpandedDashboardCard = ReferenceEquals(ExpandedDashboardCard, card) || ExpandedDashboardCard?.Key == card.Key
+            ? null
+            : card;
+    }
+
+    [RelayCommand]
+    private void OpenDashboardDetail(DashboardDetailItem? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        if (item.TargetType == "Employee")
+        {
+            NavigateToEmployee(item.TargetId, item.DepartmentName);
+            return;
+        }
+
+        if (item.TargetType == "Task")
+        {
+            NavigateToEmployee(item.TargetId, item.DepartmentName);
+            return;
+        }
+
+        if (item.TargetType == "Project")
+        {
+            SelectedNavigation = NavigationItems.FirstOrDefault(x => x.Title == "项目中心");
+            ProjectSearchKeyword = string.Empty;
+            SelectedProjectSummary = ProjectCenterItems.FirstOrDefault(project => project.ProjectId == item.TargetId)
+                ?? BuildProjectSummaries(_repository.GetSnapshot()).FirstOrDefault(project => project.ProjectId == item.TargetId);
+        }
+    }
+
+    private void NavigateToEmployee(int employeeId, string departmentName)
+    {
+        SelectedNavigation = NavigationItems.FirstOrDefault(x => x.Title == "人员管理");
+        SelectedDepartmentPage = DepartmentPages.FirstOrDefault(page => page.DepartmentName == departmentName)
+            ?? DepartmentPages.Select(page => new
+                {
+                    Page = page,
+                    Employee = page.EmployeeGroups.FirstOrDefault(group => group.EmployeeId == employeeId)
+                })
+                .FirstOrDefault(x => x.Employee is not null)
+                ?.Page
+            ?? SelectedDepartmentPage;
     }
 
     [RelayCommand]
@@ -467,17 +530,39 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ExportDepartment(DepartmentWorkPage? departmentPage)
     {
-        var department = string.IsNullOrWhiteSpace(departmentPage?.DepartmentName) ? "人员管理" : departmentPage.DepartmentName.Trim();
-        var exportDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            "人员排期导出");
-        Directory.CreateDirectory(exportDirectory);
+        TryExport(() =>
+        {
+            var department = string.IsNullOrWhiteSpace(departmentPage?.DepartmentName) ? "人员管理" : departmentPage.DepartmentName.Trim();
+            return PdfExportService.ExportDepartmentSchedule(department, departmentPage?.EmployeeGroups ?? []);
+        });
+    }
 
-        var safeName = string.Join("_", department.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
-        var filePath = Path.Combine(exportDirectory, $"{safeName}-{DateTime.Now:yyyyMMdd-HHmmss}.xls");
-        File.WriteAllText(filePath, BuildDepartmentExcelHtml(department, departmentPage), Encoding.UTF8);
+    [RelayCommand]
+    private void ExportActiveProjects()
+    {
+        TryExport(() =>
+        {
+            var snapshot = _repository.GetSnapshot();
+            var summaries = BuildProjectSummaries(snapshot)
+                .Where(project => IsActiveProject(project, snapshot))
+                .OrderBy(project => project.EndDate)
+                .ToList();
 
-        MessageBox.Show($"已导出到：\n{filePath}", "导出完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            return PdfExportService.ExportProjectList("当前正在进行的项目", summaries, "项目导出", "进行中项目");
+        });
+    }
+
+    [RelayCommand]
+    private void ExportAllProjects()
+    {
+        TryExport(() =>
+        {
+            var summaries = BuildProjectSummaries(_repository.GetSnapshot())
+                .OrderByDescending(project => project.StartDate)
+                .ToList();
+
+            return PdfExportService.ExportProjectList("公司所有项目", summaries, "项目导出", "公司所有项目");
+        });
     }
 
     [RelayCommand]
@@ -488,13 +573,18 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
+        var startDate = DateTime.Today;
+        var endDate = startDate.AddDays(45);
+        NewProjectStartDate = startDate;
+        NewProjectEndDate = endDate;
+
         _repository.CreateProject(
             NewProjectName.Trim(),
             NewProjectArea.Trim(),
             NewProjectType.Trim(),
             SelectedManager.Id,
-            NewProjectStartDate,
-            NewProjectEndDate,
+            startDate,
+            endDate,
             NewProjectSummary.Trim());
         NewProjectName = string.Empty;
         NewProjectArea = string.Empty;
@@ -915,8 +1005,32 @@ public partial class MainViewModel : ViewModelBase
                 x.CurrentStage.Contains(ProjectSearchKeyword, StringComparison.OrdinalIgnoreCase));
         }
 
-        ProjectCenterItems.Reset(query.OrderBy(x => x.EndDate));
-        ProjectTreeGroups.Reset(BuildProjectTree(query));
+        var filteredProjects = query.ToList();
+        ProjectCenterItems.Reset(filteredProjects.OrderBy(x => x.EndDate));
+        ProjectTreeGroups.Reset(BuildProjectTree(filteredProjects));
+
+        if (!string.IsNullOrWhiteSpace(ProjectSearchKeyword))
+        {
+            var currentStillVisible = SelectedProjectSummary is not null
+                && filteredProjects.Any(project => project.ProjectId == SelectedProjectSummary.ProjectId);
+            if (!currentStillVisible)
+            {
+                SelectedProjectSummary = filteredProjects.FirstOrDefault();
+            }
+        }
+    }
+
+    private static void TryExport(Func<string> exportAction)
+    {
+        try
+        {
+            var filePath = exportAction();
+            MessageBox.Show($"已导出到：\n{filePath}", "导出完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"导出失败：{ex.Message}", "导出失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private static List<ProjectSummary> BuildProjectSummaries(WorkspaceSnapshot snapshot)
@@ -981,20 +1095,171 @@ public partial class MainViewModel : ViewModelBase
 
     private static IEnumerable<DashboardCard> BuildDashboardCards(WorkspaceSnapshot snapshot, List<ProjectSummary> summaries)
     {
-        var projectOptions = BuildProjectOptions(snapshot);
-        var peopleInWork = DepartmentNames
-            .SelectMany(department => BuildEmployeeGroups(snapshot, projectOptions, department))
-            .Count(g => g.ProjectRows.Count > 0);
-        var delayedProjects = summaries.Count(x => x.IsDelayed);
-        var weeklyNodes = snapshot.ProjectStages.Count(x => x.CompletedDate is null && x.PlannedDate <= DateTime.Today.AddDays(7));
+        var activeProjects = summaries
+            .Where(project => IsActiveProject(project, snapshot))
+            .OrderBy(project => project.EndDate)
+            .ToList();
+        var activeTasks = snapshot.Tasks
+            .Where(task => !string.Equals(task.Status, "已完成", StringComparison.Ordinal))
+            .OrderBy(task => task.EndDate)
+            .ToList();
+        var dueTasks = snapshot.Tasks
+            .Where(task =>
+                !string.Equals(task.Status, "已完成", StringComparison.Ordinal)
+                && task.EndDate.Date >= DateTime.Today
+                && task.EndDate.Date <= DateTime.Today.AddDays(7))
+            .OrderBy(task => task.EndDate)
+            .ToList();
+        var overdueTasks = snapshot.Tasks
+            .Where(task =>
+                !string.Equals(task.Status, "已完成", StringComparison.Ordinal)
+                && task.EndDate.Date < DateTime.Today)
+            .OrderBy(task => task.EndDate)
+            .ToList();
 
         return
         [
-            new DashboardCard { Title = "公司成员", Value = snapshot.Employees.Count.ToString(), Subtitle = "人员基础档案" },
-            new DashboardCard { Title = "在做工作", Value = peopleInWork.ToString(), Subtitle = "当前有项目记录的成员" },
-            new DashboardCard { Title = "本周节点", Value = weeklyNodes.ToString(), Subtitle = "设计与巡场待办节点" },
-            new DashboardCard { Title = "延期项目", Value = delayedProjects.ToString(), Subtitle = "按阶段计划自动判断" }
+            new DashboardCard
+            {
+                Key = "Employees",
+                Title = "公司人员",
+                Value = snapshot.Employees.Count.ToString(),
+                Subtitle = "按部门查看全部人员",
+                Groups = BuildEmployeeDashboardGroups(snapshot)
+            },
+            new DashboardCard
+            {
+                Key = "ActiveProjects",
+                Title = "进行中项目",
+                Value = activeProjects.Count.ToString(),
+                Subtitle = "未归档且仍有未完成任务或节点",
+                Groups = BuildProjectDashboardGroups("项目列表", activeProjects)
+            },
+            new DashboardCard
+            {
+                Key = "ActiveTasks",
+                Title = "未完成任务",
+                Value = activeTasks.Count.ToString(),
+                Subtitle = "按项目查看对应人员和具体工作",
+                Groups = BuildProjectTaskDashboardGroups(activeTasks, snapshot)
+            },
+            new DashboardCard
+            {
+                Key = "DueTasks",
+                Title = "本周节点",
+                Value = dueTasks.Count.ToString(),
+                Subtitle = "未来7天内需要提交的内容",
+                Groups = BuildProjectTaskDashboardGroups(dueTasks, snapshot)
+            },
+            new DashboardCard
+            {
+                Key = "OverdueTasks",
+                Title = "逾期任务",
+                Value = overdueTasks.Count.ToString(),
+                Subtitle = "已超过提交日期的项目、人员和工作",
+                Groups = BuildProjectTaskDashboardGroups(overdueTasks, snapshot)
+            }
         ];
+    }
+
+    private static List<DashboardDetailGroup> BuildEmployeeDashboardGroups(WorkspaceSnapshot snapshot)
+    {
+        return DepartmentNames
+            .Select(department => new DashboardDetailGroup
+            {
+                Title = department,
+                Items = snapshot.Employees
+                    .Where(employee => IsEmployeeInDepartment(employee, department))
+                    .OrderBy(employee => employee.Name)
+                    .Select(employee => new DashboardDetailItem
+                    {
+                        Title = employee.Name,
+                        Subtitle = string.IsNullOrWhiteSpace(employee.Role) ? "点击查看人员安排" : employee.Role,
+                        TargetType = "Employee",
+                        TargetId = employee.Id,
+                        DepartmentName = department
+                    })
+                    .ToList()
+            })
+            .Where(group => group.Items.Count > 0)
+            .ToList();
+    }
+
+    private static List<DashboardDetailGroup> BuildProjectDashboardGroups(string title, IEnumerable<ProjectSummary> projects)
+    {
+        return
+        [
+            new DashboardDetailGroup
+            {
+                Title = title,
+                Items = projects.Select(project => new DashboardDetailItem
+                {
+                    Title = project.Name,
+                    Subtitle = $"{project.CurrentStage} · {project.EndDate:yyyy-MM-dd}",
+                    TargetType = "Project",
+                    TargetId = project.ProjectId
+                }).ToList()
+            }
+        ];
+    }
+
+    private static List<DashboardDetailGroup> BuildProjectTaskDashboardGroups(IEnumerable<WorkTask> tasks, WorkspaceSnapshot snapshot)
+    {
+        return tasks
+            .GroupBy(task => task.ProjectId)
+            .Select(group =>
+            {
+                var project = snapshot.Projects.FirstOrDefault(x => x.Id == group.Key);
+                return new DashboardDetailGroup
+                {
+                    Title = project?.Name ?? "未知项目",
+                    Items = group
+                        .OrderBy(task => task.EndDate)
+                        .Select(task =>
+                        {
+                            var owner = snapshot.Employees.FirstOrDefault(x => x.Id == task.OwnerId);
+                            var department = ResolveEmployeeDepartment(owner);
+                            return new DashboardDetailItem
+                            {
+                                Title = owner is null ? "未分配人员" : owner.Name,
+                                Subtitle = $"{task.Name} · 提交 {task.EndDate:yyyy-MM-dd}",
+                                TargetType = "Task",
+                                TargetId = owner?.Id ?? 0,
+                                DepartmentName = department
+                            };
+                        })
+                        .ToList()
+                };
+            })
+            .OrderBy(group => group.Title)
+            .ToList();
+    }
+
+    private static string ResolveEmployeeDepartment(Employee? employee)
+    {
+        if (employee is null)
+        {
+            return DepartmentNames[0];
+        }
+
+        return DepartmentNames.Contains(employee.Department) ? employee.Department : DepartmentNames[0];
+    }
+
+    private static bool IsActiveProject(ProjectSummary project, WorkspaceSnapshot snapshot)
+    {
+        if (string.Equals(project.Status, "已归档", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var hasOpenTask = snapshot.Tasks.Any(task =>
+            task.ProjectId == project.ProjectId
+            && !string.Equals(task.Status, "已完成", StringComparison.Ordinal));
+        var hasOpenStage = snapshot.ProjectStages.Any(stage =>
+            stage.ProjectId == project.ProjectId
+            && stage.CompletedDate is null);
+
+        return hasOpenTask || hasOpenStage || project.EndDate.Date >= DateTime.Today;
     }
 
     private static List<ProjectOption> BuildProjectOptions(WorkspaceSnapshot snapshot)

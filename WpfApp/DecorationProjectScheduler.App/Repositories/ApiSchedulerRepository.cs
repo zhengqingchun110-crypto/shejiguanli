@@ -45,7 +45,7 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
         Delete($"api/employees/{employeeId}");
 
     public void CreateProject(string name, string area, string projectType, int managerId, DateTime startDate, DateTime endDate, string summary) =>
-        Post("api/projects", new { name, area, projectType, managerId, startDate, endDate, summary });
+        Post("api/projects", new { name, area, projectType, managerId, startDate = ToDateOnlyText(startDate), endDate = ToDateOnlyText(endDate), summary });
 
     public void UpdateProject(int projectId, string name, string area, string projectType, string operatorNames, string summary, string taskPlan) =>
         Put($"api/projects/{projectId}", new { name, area, projectType, operatorNames, summary, taskPlan });
@@ -54,13 +54,13 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
         Delete($"api/projects/{projectId}");
 
     public void AddTask(int projectId, string name, int ownerId, int workloadPercent, int progressPercent, DateTime startDate, DateTime endDate, string status) =>
-        Post("api/tasks", new { projectId, name, ownerId, workloadPercent, progressPercent, startDate, endDate, status });
+        Post("api/tasks", new { projectId, name, ownerId, workloadPercent, progressPercent, startDate = ToDateOnlyText(startDate), endDate = ToDateOnlyText(endDate), status });
 
     public void UpdateTask(int taskId, string name) =>
         Put($"api/tasks/{taskId}", new { name });
 
     public void UpdateTaskFromSchedule(int taskId, int projectId, string name, DateTime endDate) =>
-        Put($"api/tasks/{taskId}/schedule", new { projectId, name, endDate });
+        Put($"api/tasks/{taskId}/schedule", new { projectId, name, endDate = ToDateOnlyText(endDate) });
 
     public void DeleteTask(int taskId) =>
         Delete($"api/tasks/{taskId}");
@@ -72,13 +72,13 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
         Post($"api/tasks/{taskId}/complete", new { });
 
     public void AddProjectFollowUp(int projectId, int? taskId, string content, string operatorName, DateTime completedAt) =>
-        Post("api/follow-ups", new { projectId, taskId, content, operatorName, completedAt });
+        Post("api/follow-ups", new { projectId, taskId, content, operatorName, completedAt = ToDateTimeText(completedAt) });
 
     public void DeleteProjectFollowUp(int followUpId) =>
         Delete($"api/follow-ups/{followUpId}");
 
     public void AddSiteVisit(int projectId, DateTime visitDate, string issues, string suggestions, string photoPath, string rectificationStatus) =>
-        Post("api/site-visits", new { projectId, visitDate, issues, suggestions, photoPath, rectificationStatus });
+        Post("api/site-visits", new { projectId, visitDate = ToDateOnlyText(visitDate), issues, suggestions, photoPath, rectificationStatus });
 
     public void AddHandoverRecord(int projectId, DateTime handoverDate, string participants, string attachmentPath, string notes)
     {
@@ -87,7 +87,7 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
     }
 
     public void AddAcceptanceRecord(int projectId, DateTime acceptanceDate, string result, string rectificationItems, string reviewRecord, string status) =>
-        Post("api/acceptances", new { projectId, acceptanceDate, result, rectificationItems, reviewRecord, status });
+        Post("api/acceptances", new { projectId, acceptanceDate = ToDateOnlyText(acceptanceDate), result, rectificationItems, reviewRecord, status });
 
     public void AddProjectFile(int projectId, string category, string fileName, string filePath) =>
         Post("api/files", new { projectId, category, fileName, filePath });
@@ -144,4 +144,8 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
     {
         DataChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private static string ToDateOnlyText(DateTime value) => value.Date.ToString("yyyy-MM-dd");
+
+    private static string ToDateTimeText(DateTime value) => value.ToString("yyyy-MM-dd HH:mm:ss");
 }
