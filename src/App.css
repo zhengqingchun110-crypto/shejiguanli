@@ -1,0 +1,259 @@
+:root {
+  color: #1d1d1b;
+  background:
+    radial-gradient(circle at top left, rgba(203, 117, 57, 0.18), transparent 26%),
+    radial-gradient(circle at top right, rgba(36, 83, 58, 0.16), transparent 24%),
+    linear-gradient(135deg, #f6f2e9 0%, #f0eadf 52%, #ece4d8 100%);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 1200px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  padding: 28px;
+  background: rgba(32, 48, 43, 0.92);
+  color: #f8f2e8;
+  display: grid;
+  gap: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.main {
+  padding: 28px;
+  display: grid;
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255, 251, 245, 0.9);
+  border: 1px solid rgba(71, 54, 38, 0.09);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(82, 63, 40, 0.08);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.heroPanel {
+  background: linear-gradient(135deg, #24403a 0%, #375f55 100%);
+  color: #fff7ed;
+  border-radius: 26px;
+  padding: 24px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+}
+
+.heroPanel strong {
+  font-size: 2rem;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  color: #b36b35;
+}
+
+.muted {
+  color: #6b6258;
+}
+
+.statGrid,
+.contentGrid {
+  display: grid;
+  gap: 20px;
+}
+
+.statGrid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.statCard {
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: rgba(255, 250, 242, 0.84);
+  border: 1px solid rgba(95, 74, 48, 0.08);
+}
+
+.statCard strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 2rem;
+}
+
+.contentGrid {
+  grid-template-columns: 1.15fr 0.85fr;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.sectionHead,
+.progressRow,
+.memberItem,
+.taskFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.metaGrid {
+  margin: 18px 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.metaGrid span,
+.projectItem span,
+.projectItem em,
+.memberItem span,
+.taskCard span,
+.taskCard small {
+  display: block;
+  color: #6e665c;
+  font-style: normal;
+}
+
+.progressBar,
+.miniBar {
+  width: 100%;
+  height: 10px;
+  background: rgba(39, 72, 63, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressBar div,
+.miniBar div {
+  height: 100%;
+  background: linear-gradient(90deg, #cb7539, #24533a);
+}
+
+.projectList,
+.memberList,
+.formCard {
+  display: grid;
+  gap: 12px;
+}
+
+.projectItem,
+.taskCard {
+  border: none;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 16px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.projectItem.active {
+  outline: 2px solid #cb7539;
+  background: #fff8f0;
+}
+
+input,
+button {
+  border-radius: 14px;
+}
+
+input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(94, 73, 46, 0.16);
+  background: rgba(255, 252, 247, 0.95);
+}
+
+button {
+  padding: 12px 16px;
+  border: none;
+  background: #cb7539;
+  color: white;
+  cursor: pointer;
+}
+
+.badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+}
+
+.status-执行中 { background: rgba(43, 113, 75, 0.14); color: #24533a; }
+.status-风险中 { background: rgba(184, 77, 48, 0.12); color: #9a442d; }
+.status-规划中 { background: rgba(168, 125, 49, 0.15); color: #8d6428; }
+.status-已交付 { background: rgba(51, 86, 128, 0.13); color: #365985; }
+
+.inlineForm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.kanbanColumn {
+  background: rgba(244, 237, 226, 0.7);
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 320px;
+}
+
+.priority {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.priority-高 { background: #f8ddd2; color: #9b4a31; }
+.priority-中 { background: #f5e8c8; color: #8e6726; }
+.priority-低 { background: #dcecdf; color: #2f6344; }
+
+@media (max-width: 1280px) {
+  .shell,
+  .hero,
+  .contentGrid,
+  .statGrid,
+  .kanban {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    min-width: auto;
+  }
+}
