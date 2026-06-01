@@ -21,10 +21,19 @@ public partial class App : Application
         var apiBaseUrl = Environment.GetEnvironmentVariable("SCHEDULER_API_URL");
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
-            var configPath = Path.Combine(appRoot, "api-url.txt");
-            if (File.Exists(configPath))
+            var localConfigPath = Path.Combine(AppContext.BaseDirectory, "api-url.txt");
+            if (File.Exists(localConfigPath))
             {
-                apiBaseUrl = File.ReadAllText(configPath).Trim();
+                apiBaseUrl = File.ReadAllText(localConfigPath).Trim();
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(apiBaseUrl))
+        {
+            var appDataConfigPath = Path.Combine(appRoot, "api-url.txt");
+            if (File.Exists(appDataConfigPath))
+            {
+                apiBaseUrl = File.ReadAllText(appDataConfigPath).Trim();
             }
         }
 
@@ -46,7 +55,10 @@ public partial class App : Application
 
         var mainWindow = new MainWindow
         {
-            DataContext = new MainViewModel(repository, themeService)
+            DataContext = new MainViewModel(repository, themeService),
+            Title = string.IsNullOrWhiteSpace(apiBaseUrl)
+                ? "装饰设计项目与人员排期管理系统 - 本机模式"
+                : "装饰设计项目与人员排期管理系统 - 云端模式"
         };
         MainWindow = mainWindow;
         mainWindow.Show();
