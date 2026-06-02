@@ -11,6 +11,7 @@ services:
       - "80:5000"
     volumes:
       - ./app/wwwroot:/app/wwwroot:ro
+      - ./app/project-files:/app/ProjectFiles
     depends_on:
       postgres:
         condition: service_healthy

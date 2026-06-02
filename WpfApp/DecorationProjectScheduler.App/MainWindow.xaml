@@ -218,6 +218,187 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Padding="4,8" />
         </DataTemplate>
+
+        <DataTemplate x:Key="ResourceSectionTemplate" DataType="{x:Type models:ResourceCategorySection}">
+            <Border Background="{DynamicResource PanelBrush}"
+                    CornerRadius="22"
+                    Padding="18"
+                    Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                            <TextBlock Text="本地资料和云盘大文件分开管理。"
+                                       Margin="0,5,0,0"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="上传"
+                                MinWidth="90"
+                                Command="{Binding DataContext.UploadResourceFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding}" />
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Background="#EEF3F4F7"
+                                CornerRadius="18"
+                                Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="本地上传资料"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,10" />
+                                <TextBlock Text="{Binding LocalEmptyText}"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,2,0,2" />
+                                <ItemsControl ItemsSource="{Binding LocalFiles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type models:ProjectFileRecord}">
+                                            <Border Background="#FAFBFC"
+                                                    CornerRadius="14"
+                                                    Padding="12"
+                                                    Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding FileName}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding UploadedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                                                   Margin="0,4,0,0"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Content="下载"
+                                                            Style="{StaticResource SmallPillButtonStyle}"
+                                                            Margin="12,0,0,0"
+                                                            Command="{Binding DataContext.DownloadResourceFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Grid.Column="2"
+                                                            Content="×"
+                                                            Style="{StaticResource IconButtonStyle}"
+                                                            Width="32"
+                                                            Height="32"
+                                                            FontSize="17"
+                                                            Margin="8,0,0,0"
+                                                            Command="{Binding DataContext.DeleteResourceFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Background="#EEF3F4F7"
+                                CornerRadius="18"
+                                Padding="14">
+                            <StackPanel>
+                                <TextBlock Text="云盘大文件链接"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,10" />
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.2*" />
+                                        <ColumnDefinition Width="1.8*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding NewCloudTitle, UpdateSourceTrigger=PropertyChanged}"
+                                             Tag="内容说明"
+                                             Margin="0,0,10,0" />
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding NewCloudUrl, UpdateSourceTrigger=PropertyChanged}"
+                                             Tag="云盘链接"
+                                             Margin="0,0,10,0" />
+                                    <Button Grid.Column="2"
+                                            Content="保存链接"
+                                            MinWidth="96"
+                                            Command="{Binding DataContext.AddCloudLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" />
+                                </Grid>
+
+                                <TextBlock Text="云端文件"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding CloudEmptyText}"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Margin="0,2,0,2" />
+                                <ItemsControl ItemsSource="{Binding CloudLinks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type models:ProjectFileRecord}">
+                                            <Border Background="#FAFBFC"
+                                                    CornerRadius="14"
+                                                    Padding="12"
+                                                    Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding FileName}"
+                                                                   FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding FilePath}"
+                                                                   Margin="0,4,0,0"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                   TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1"
+                                                            Content="复制链接"
+                                                            Style="{StaticResource SmallPillButtonStyle}"
+                                                            MinWidth="78"
+                                                            Margin="12,0,0,0"
+                                                            Command="{Binding DataContext.CopyCloudLinkCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Grid.Column="2"
+                                                            Content="×"
+                                                            Style="{StaticResource IconButtonStyle}"
+                                                            Width="32"
+                                                            Height="32"
+                                                            FontSize="17"
+                                                            Margin="8,0,0,0"
+                                                            Command="{Binding DataContext.DeleteResourceFileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                </StackPanel>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <Viewbox Stretch="Uniform"
@@ -484,10 +665,18 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:DashboardDetailGroup}">
                                     <StackPanel Margin="0,0,0,14">
-                                        <TextBlock Text="{Binding Title}"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"
-                                                   Margin="0,0,0,8" />
+                                        <Button Command="{Binding DataContext.OpenDashboardGroupCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Background="Transparent"
+                                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                                HorizontalContentAlignment="Left"
+                                                Padding="0"
+                                                Margin="0,0,0,8">
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontSize="17"
+                                                       FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" />
+                                        </Button>
                                         <ItemsControl ItemsSource="{Binding Items}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -694,7 +883,7 @@
                             </Grid.RowDefinitions>
 
                             <TextBox Text="{Binding ProjectSearchKeyword, UpdateSourceTrigger=PropertyChanged}"
-                                     Tag="搜索项目名称"
+                                     Tag="搜索项目"
                                      Margin="0,0,0,12" />
 
                             <TreeView Grid.Row="1"
@@ -832,6 +1021,99 @@
                                 </Grid>
                             </StackPanel>
                         </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="1"
+                Margin="8,20,20,20"
+                Style="{StaticResource PanelBorderStyle}"
+                Visibility="{Binding ResourceCenterVisibility}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="资料中心"
+                               FontSize="30"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="目录与项目中心同步，右侧按量房、提案、平面、效果图、施工图和施工记录整理资料。"
+                               Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                </StackPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="24" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Background="#EEF3F4F7"
+                            CornerRadius="24"
+                            Padding="16"
+                            Margin="0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <TextBox Text="{Binding ProjectSearchKeyword, UpdateSourceTrigger=PropertyChanged}"
+                                     Tag="搜索项目"
+                                     Margin="0,0,0,12" />
+
+                            <TreeView Grid.Row="1"
+                                      ItemsSource="{Binding ProjectTreeGroups}"
+                                      SelectedItemChanged="ProjectTree_SelectedItemChanged"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      FontSize="17">
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="{x:Type TreeViewItem}">
+                                        <Setter Property="IsExpanded" Value="True" />
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
+                            </TreeView>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Column="2"
+                            Background="#F7F8FA"
+                            CornerRadius="24"
+                            Padding="24">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Margin="0,0,0,18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding EditableProjectName}"
+                                               FontSize="28"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <TextBlock Text="当前项目资料"
+                                               Margin="0,6,0,0"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <ScrollViewer Grid.Row="1"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding ResourceSections}"
+                                              ItemTemplate="{StaticResource ResourceSectionTemplate}" />
+                            </ScrollViewer>
+                        </Grid>
                     </Border>
                 </Grid>
             </Grid>

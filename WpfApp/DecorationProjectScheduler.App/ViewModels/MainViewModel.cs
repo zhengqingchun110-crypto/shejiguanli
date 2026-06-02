@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using DecorationProjectScheduler.App.Models;
 using DecorationProjectScheduler.App.Repositories;
 using DecorationProjectScheduler.App.Services;
+using Microsoft.Win32;
 
 namespace DecorationProjectScheduler.App.ViewModels;
 
@@ -18,8 +19,10 @@ public partial class MainViewModel : ViewModelBase
     private readonly UpdateService _updateService;
     private readonly SecuritySettingsService _securitySettingsService;
     private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门", "工程监理"];
+    private static readonly string[] ResourceCategoryNames = ["量房信息", "策划提案文件", "平面信息", "效果图", "施工图", "施工记录"];
+    private const string CloudCategorySuffix = "（云盘）";
 
-    public MainViewModel(ISchedulerRepository repository, ThemeService themeService, UpdateService updateService, SecuritySettingsService securitySettingsService)
+    public MainViewModel(ISchedulerRepository repository, ThemeService themeService, FileStorageService fileStorageService, UpdateService updateService, SecuritySettingsService securitySettingsService)
     {
         _repository = repository;
         _updateService = updateService;
@@ -29,7 +32,8 @@ public partial class MainViewModel : ViewModelBase
         [
             new NavigationMenuItem { Title = "总览" },
             new NavigationMenuItem { Title = "人员管理" },
-            new NavigationMenuItem { Title = "项目中心" }
+            new NavigationMenuItem { Title = "项目中心" },
+            new NavigationMenuItem { Title = "资料中心" }
         ];
 
         FilterStatuses =
@@ -100,6 +104,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<AcceptanceRecord> SelectedAcceptanceRecords { get; } = [];
     public ObservableCollection<ProjectFileRecord> SelectedProjectFiles { get; } = [];
     public ObservableCollection<ProjectFollowUp> SelectedProjectFollowUps { get; } = [];
+    public ObservableCollection<ResourceCategorySection> ResourceSections { get; } = [];
     public ObservableCollection<TimelineItem> AllTimelineItems { get; } = [];
     public ObservableCollection<Employee> Managers { get; } = [];
     public ObservableCollection<Employee> Employees { get; } = [];
@@ -260,8 +265,9 @@ public partial class MainViewModel : ViewModelBase
     public Visibility OverviewVisibility => !IsSettingsOpen && IsMenu("总览") ? Visibility.Visible : Visibility.Collapsed;
     public Visibility PeopleVisibility => !IsSettingsOpen && IsMenu("人员管理") ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ProjectCenterVisibility => !IsSettingsOpen && IsMenu("项目中心") ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ResourceCenterVisibility => !IsSettingsOpen && IsMenu("资料中心") ? Visibility.Visible : Visibility.Collapsed;
     public Visibility SettingsVisibility => IsSettingsOpen ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility NonProjectContentVisibility => !IsSettingsOpen && IsMenu("项目中心") ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility NonProjectContentVisibility => !IsSettingsOpen && (IsMenu("项目中心") || IsMenu("资料中心")) ? Visibility.Collapsed : Visibility.Visible;
     public Visibility ProjectDetailVisibility => Visibility.Collapsed;
     public Visibility TimelineVisibility => Visibility.Collapsed;
 
@@ -274,6 +280,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(OverviewVisibility));
         OnPropertyChanged(nameof(PeopleVisibility));
         OnPropertyChanged(nameof(ProjectCenterVisibility));
+        OnPropertyChanged(nameof(ResourceCenterVisibility));
         OnPropertyChanged(nameof(SettingsVisibility));
         OnPropertyChanged(nameof(NonProjectContentVisibility));
         OnPropertyChanged(nameof(DashboardDetailVisibility));
@@ -287,6 +294,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(OverviewVisibility));
         OnPropertyChanged(nameof(PeopleVisibility));
         OnPropertyChanged(nameof(ProjectCenterVisibility));
+        OnPropertyChanged(nameof(ResourceCenterVisibility));
         OnPropertyChanged(nameof(NonProjectContentVisibility));
         OnPropertyChanged(nameof(DashboardDetailVisibility));
     }
@@ -357,6 +365,20 @@ public partial class MainViewModel : ViewModelBase
             SelectedProjectSummary = ProjectCenterItems.FirstOrDefault(project => project.ProjectId == item.TargetId)
                 ?? BuildProjectSummaries(_repository.GetSnapshot()).FirstOrDefault(project => project.ProjectId == item.TargetId);
         }
+    }
+
+    [RelayCommand]
+    private void OpenDashboardGroup(DashboardDetailGroup? group)
+    {
+        if (group is null || group.TargetType != "Project")
+        {
+            return;
+        }
+
+        SelectedNavigation = NavigationItems.FirstOrDefault(x => x.Title == "项目中心");
+        ProjectSearchKeyword = string.Empty;
+        SelectedProjectSummary = ProjectCenterItems.FirstOrDefault(project => project.ProjectId == group.TargetId)
+            ?? BuildProjectSummaries(_repository.GetSnapshot()).FirstOrDefault(project => project.ProjectId == group.TargetId);
     }
 
     private void NavigateToEmployee(int employeeId, string departmentName)
@@ -910,6 +932,142 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void UploadResourceFile(ResourceCategorySection? section)
+    {
+        if (SelectedProjectSummary is null || section is null)
+        {
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = $"上传{section.Name}",
+            Filter = "所有文件|*.*",
+            Multiselect = true
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var sourcePath in dialog.FileNames)
+            {
+                _repository.UploadProjectFile(SelectedProjectSummary.ProjectId, SelectedProjectSummary.ProjectCode, section.Name, sourcePath);
+            }
+
+            Reload();
+            MessageBox.Show(_repository.IsCloudMode ? "资料已上传到云端。" : "资料已保存到本机项目资料目录。", "上传完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"上传失败：{ex.Message}", "上传失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void DownloadResourceFile(ProjectFileRecord? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "保存资料",
+            FileName = file.FileName,
+            Filter = "所有文件|*.*"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _repository.DownloadProjectFile(file, dialog.FileName);
+            MessageBox.Show($"资料已保存到：\n{dialog.FileName}", "下载完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"下载失败：{ex.Message}", "下载失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
+    private void AddCloudLink(ResourceCategorySection? section)
+    {
+        if (SelectedProjectSummary is null || section is null)
+        {
+            return;
+        }
+
+        var title = section.NewCloudTitle.Trim();
+        var url = section.NewCloudUrl.Trim();
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        _repository.AddProjectFile(SelectedProjectSummary.ProjectId, BuildCloudCategory(section.Name), title, url);
+        section.NewCloudTitle = string.Empty;
+        section.NewCloudUrl = string.Empty;
+        Reload();
+        MessageBox.Show("云盘链接已保存。", "保存成功", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    [RelayCommand]
+    private void CopyCloudLink(ProjectFileRecord? file)
+    {
+        if (file is null || string.IsNullOrWhiteSpace(file.FilePath))
+        {
+            return;
+        }
+
+        Clipboard.SetText(file.FilePath.Trim());
+        MessageBox.Show("云盘链接已复制。", "复制完成", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    [RelayCommand]
+    private void DeleteResourceFile(ProjectFileRecord? file)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"确定删除“{file.FileName}”吗？删除后资料记录会从当前项目中移除。",
+            "确认删除资料",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!ConfirmSensitivePassword($"删除资料：{file.FileName}"))
+        {
+            return;
+        }
+
+        try
+        {
+            _repository.DeleteProjectFile(file.Id);
+            Reload();
+            MessageBox.Show("资料已删除。", "删除成功", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"删除失败：{ex.Message}", "删除失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
     private void ToggleStage(ProjectStage? stage)
     {
         if (stage is null)
@@ -982,6 +1140,7 @@ public partial class MainViewModel : ViewModelBase
             SelectedAcceptanceRecords.Clear();
             SelectedProjectFiles.Clear();
             SelectedProjectFollowUps.Clear();
+            ResourceSections.Clear();
             HasPendingChanges = false;
             return;
         }
@@ -1008,7 +1167,31 @@ public partial class MainViewModel : ViewModelBase
         SelectedAcceptanceRecords.Reset(snapshot.AcceptanceRecords.Where(x => x.ProjectId == SelectedProjectSummary.ProjectId).OrderByDescending(x => x.AcceptanceDate));
         SelectedProjectFiles.Reset(snapshot.ProjectFiles.Where(x => x.ProjectId == SelectedProjectSummary.ProjectId).OrderByDescending(x => x.UploadedAt));
         SelectedProjectFollowUps.Reset(snapshot.ProjectFollowUps.Where(x => x.ProjectId == SelectedProjectSummary.ProjectId).OrderByDescending(x => x.CompletedAt));
+        RefreshResourceSections(snapshot);
         HasPendingChanges = false;
+    }
+
+    private void RefreshResourceSections(WorkspaceSnapshot snapshot)
+    {
+        if (SelectedProjectSummary is null)
+        {
+            ResourceSections.Clear();
+            return;
+        }
+
+        var projectId = SelectedProjectSummary.ProjectId;
+        var projectFiles = snapshot.ProjectFiles
+            .Where(file => file.ProjectId == projectId)
+            .OrderByDescending(file => file.UploadedAt)
+            .ToList();
+        ResourceSections.Reset(ResourceCategoryNames.Select(category => new ResourceCategorySection
+        {
+            Name = category,
+            LocalFiles = new ObservableCollection<ProjectFileRecord>(
+                projectFiles.Where(file => string.Equals(file.Category, category, StringComparison.Ordinal))),
+            CloudLinks = new ObservableCollection<ProjectFileRecord>(
+                projectFiles.Where(file => string.Equals(file.Category, BuildCloudCategory(category), StringComparison.Ordinal)))
+        }));
     }
 
     private void AttachPendingChangeTracking()
@@ -1175,6 +1358,26 @@ public partial class MainViewModel : ViewModelBase
 
         MessageBox.Show("确认密码不正确。", "验证失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         return false;
+    }
+
+    private static string BuildCloudCategory(string category) => $"{category}{CloudCategorySuffix}";
+
+    private static void TryOpenPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            MessageBox.Show("当前没有可打开的文件或链接。", "打开失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            PdfExportService.OpenFile(path.Trim());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"打开失败：{ex.Message}", "打开失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private static List<ProjectSummary> BuildProjectSummaries(WorkspaceSnapshot snapshot)
@@ -1348,6 +1551,8 @@ public partial class MainViewModel : ViewModelBase
                 return new DashboardDetailGroup
                 {
                     Title = project.Name,
+                    TargetType = "Project",
+                    TargetId = project.ProjectId,
                     Items = tasks.Count == 0
                         ? [new DashboardDetailItem
                         {
@@ -1363,8 +1568,8 @@ public partial class MainViewModel : ViewModelBase
                             {
                                 Title = owner?.Name ?? string.Empty,
                                 Subtitle = task.Name,
-                                TargetType = owner is null ? "Project" : "Task",
-                                TargetId = owner?.Id ?? project.ProjectId,
+                                TargetType = "Project",
+                                TargetId = project.ProjectId,
                                 DepartmentName = ResolveEmployeeDepartment(owner)
                             };
                         }).ToList()

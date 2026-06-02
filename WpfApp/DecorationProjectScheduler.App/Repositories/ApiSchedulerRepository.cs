@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -91,6 +92,46 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
 
     public void AddProjectFile(int projectId, string category, string fileName, string filePath) =>
         Post("api/files", new { projectId, category, fileName, filePath });
+
+    public void UploadProjectFile(int projectId, string projectCode, string category, string sourcePath)
+    {
+        try
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new StringContent(projectId.ToString()), "projectId");
+            form.Add(new StringContent(projectCode), "projectCode");
+            form.Add(new StringContent(category), "category");
+            using var stream = File.OpenRead(sourcePath);
+            var fileContent = new StreamContent(stream);
+            form.Add(fileContent, "file", Path.GetFileName(sourcePath));
+            using var response = _httpClient.PostAsync("api/files/upload", form).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+            RaiseChanged();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"云端资料上传失败：{ex.Message}", ex);
+        }
+    }
+
+    public void DownloadProjectFile(ProjectFileRecord file, string destinationPath)
+    {
+        try
+        {
+            using var response = _httpClient.GetAsync($"api/files/{file.Id}/download").GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+            using var sourceStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+            using var destinationStream = File.Create(destinationPath);
+            sourceStream.CopyTo(destinationStream);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"云端资料下载失败：{ex.Message}", ex);
+        }
+    }
+
+    public void DeleteProjectFile(int fileId) =>
+        Delete($"api/files/{fileId}");
 
     public void ToggleStageCompletion(int stageId, bool complete) =>
         Put($"api/stages/{stageId}/toggle", new { complete });

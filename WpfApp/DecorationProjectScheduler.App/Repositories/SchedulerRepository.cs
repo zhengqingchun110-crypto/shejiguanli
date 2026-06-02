@@ -1,5 +1,7 @@
 ﻿using DecorationProjectScheduler.App.Helpers;
 using DecorationProjectScheduler.App.Models;
+using System.IO;
+using DecorationProjectScheduler.App.Services;
 using Microsoft.Data.Sqlite;
 
 namespace DecorationProjectScheduler.App.Repositories;
@@ -7,10 +9,12 @@ namespace DecorationProjectScheduler.App.Repositories;
 public sealed class SchedulerRepository : ISchedulerRepository
 {
     private readonly string _connectionString;
+    private readonly FileStorageService _fileStorageService;
 
-    public SchedulerRepository(string connectionString)
+    public SchedulerRepository(string connectionString, FileStorageService fileStorageService)
     {
         _connectionString = connectionString;
+        _fileStorageService = fileStorageService;
     }
 
     public event EventHandler? DataChanged;
@@ -430,6 +434,61 @@ public sealed class SchedulerRepository : ISchedulerRepository
             ("$uploadedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
 
         TouchProject(projectId);
+        RaiseChanged();
+    }
+
+    public void UploadProjectFile(int projectId, string projectCode, string category, string sourcePath)
+    {
+        var savedPath = _fileStorageService.SaveProjectFile(projectCode, category, sourcePath);
+        AddProjectFile(projectId, category, Path.GetFileName(sourcePath), savedPath);
+    }
+
+    public void DownloadProjectFile(ProjectFileRecord file, string destinationPath)
+    {
+        if (!File.Exists(file.FilePath))
+        {
+            throw new FileNotFoundException("没有找到本地资料文件。", file.FilePath);
+        }
+
+        File.Copy(file.FilePath, destinationPath, overwrite: true);
+    }
+
+    public void DeleteProjectFile(int fileId)
+    {
+        string? filePath = null;
+        int? projectId = null;
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var query = connection.CreateCommand();
+            query.CommandText = "SELECT ProjectId, FilePath FROM ProjectFiles WHERE Id = $fileId;";
+            query.Parameters.AddWithValue("$fileId", fileId);
+            using var reader = query.ExecuteReader();
+            if (reader.Read())
+            {
+                projectId = reader.GetInt32(0);
+                filePath = reader.GetString(1);
+            }
+        }
+
+        ExecuteNonQuery("DELETE FROM ProjectFiles WHERE Id = $fileId;", ("$fileId", fileId));
+        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+        {
+            try
+            {
+                File.Delete(filePath);
+            }
+            catch
+            {
+                // 文件可能被占用，删除数据库记录优先保证界面状态正确。
+            }
+        }
+
+        if (projectId is not null)
+        {
+            TouchProject(projectId.Value);
+        }
+
         RaiseChanged();
     }
 

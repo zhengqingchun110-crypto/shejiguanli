@@ -17,6 +17,7 @@ public partial class App : Application
         var appRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DecorationProjectScheduler");
         var databasePath = Path.Combine(appRoot, "Database", "scheduler.db");
         var fileRoot = Path.Combine(appRoot, "ProjectFiles");
+        var fileStorageService = new FileStorageService(fileRoot);
 
         ISchedulerRepository repository;
         var apiBaseUrl = Environment.GetEnvironmentVariable("SCHEDULER_API_URL");
@@ -42,7 +43,7 @@ public partial class App : Application
         {
             var initializer = new SqliteInitializer(databasePath);
             initializer.Initialize();
-            repository = new SchedulerRepository(initializer.ConnectionString);
+            repository = new SchedulerRepository(initializer.ConnectionString, fileStorageService);
         }
         else
         {
@@ -50,7 +51,6 @@ public partial class App : Application
         }
 
         var themeService = new ThemeService();
-        var fileStorageService = new FileStorageService(fileRoot);
         var updateService = new UpdateService(apiBaseUrl);
         var securitySettingsService = new SecuritySettingsService();
 
@@ -58,7 +58,7 @@ public partial class App : Application
 
         var mainWindow = new MainWindow
         {
-            DataContext = new MainViewModel(repository, themeService, updateService, securitySettingsService),
+            DataContext = new MainViewModel(repository, themeService, fileStorageService, updateService, securitySettingsService),
             Title = string.IsNullOrWhiteSpace(apiBaseUrl)
                 ? "凡响智道 - 本机模式"
                 : "凡响智道 - 云端模式"

@@ -27,5 +27,8 @@ public interface ISchedulerRepository
     void AddHandoverRecord(int projectId, DateTime handoverDate, string participants, string attachmentPath, string notes);
     void AddAcceptanceRecord(int projectId, DateTime acceptanceDate, string result, string rectificationItems, string reviewRecord, string status);
     void AddProjectFile(int projectId, string category, string fileName, string filePath);
+    void UploadProjectFile(int projectId, string projectCode, string category, string sourcePath);
+    void DownloadProjectFile(ProjectFileRecord file, string destinationPath);
+    void DeleteProjectFile(int fileId);
     void ToggleStageCompletion(int stageId, bool complete);
 }

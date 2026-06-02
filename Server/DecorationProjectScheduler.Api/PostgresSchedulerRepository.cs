@@ -382,6 +382,38 @@ public sealed class PostgresSchedulerRepository
         await TouchProjectAsync(request.ProjectId);
     }
 
+    public async Task<int> AddProjectFileAndReturnIdAsync(AddProjectFileRequest request)
+    {
+        var fileId = await ScalarAsync<int>("""
+            INSERT INTO project_files (project_id, category, file_name, file_path, uploaded_at)
+            VALUES (@projectId, @category, @fileName, @filePath, @uploadedAt)
+            RETURNING id;
+            """,
+            ("projectId", request.ProjectId),
+            ("category", request.Category),
+            ("fileName", request.FileName),
+            ("filePath", request.FilePath),
+            ("uploadedAt", DateTime.Now));
+        await TouchProjectAsync(request.ProjectId);
+        return fileId;
+    }
+
+    public async Task<ProjectFileRecord?> GetProjectFileAsync(int fileId) =>
+        await ReadProjectFileAsync("WHERE id = @fileId", ("fileId", fileId));
+
+    public async Task<ProjectFileRecord?> DeleteProjectFileAsync(int fileId)
+    {
+        var file = await GetProjectFileAsync(fileId);
+        if (file is null)
+        {
+            return null;
+        }
+
+        await ExecuteAsync("DELETE FROM project_files WHERE id = @fileId;", ("fileId", fileId));
+        await TouchProjectAsync(file.ProjectId);
+        return file;
+    }
+
     public async Task ToggleStageAsync(int stageId, bool complete)
     {
         var projectId = await ScalarAsync<int>("SELECT project_id FROM project_stages WHERE id = @stageId;", ("stageId", stageId));
@@ -548,6 +580,35 @@ public sealed class PostgresSchedulerRepository
         }
 
         return list;
+    }
+
+    private async Task<ProjectFileRecord?> ReadProjectFileAsync(string whereSql, params (string Name, object? Value)[] parameters)
+    {
+        await using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync();
+        await using var command = CreateCommand(connection, $"""
+            SELECT id, project_id, category, file_name, file_path, uploaded_at
+            FROM project_files
+            {whereSql}
+            LIMIT 1;
+            """,
+            null,
+            parameters);
+        await using var reader = await command.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+        {
+            return null;
+        }
+
+        return new ProjectFileRecord
+        {
+            Id = reader.GetInt32(0),
+            ProjectId = reader.GetInt32(1),
+            Category = reader.GetString(2),
+            FileName = reader.GetString(3),
+            FilePath = reader.GetString(4),
+            UploadedAt = reader.GetDateTime(5)
+        };
     }
 
     private static async Task<List<ProjectFollowUp>> ReadFollowUpsAsync(NpgsqlConnection connection)

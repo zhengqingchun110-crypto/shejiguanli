@@ -12,6 +12,8 @@ public sealed class DashboardCard
 public sealed class DashboardDetailGroup
 {
     public string Title { get; init; } = string.Empty;
+    public string TargetType { get; init; } = string.Empty;
+    public int TargetId { get; init; }
     public List<DashboardDetailItem> Items { get; init; } = [];
 }
 

@@ -19,9 +19,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.10";
+    var version = configuration["Update:Version"] ?? "1.0.11";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.10 数据保护验证版：彻底移除本地示例数据填充代码，更新前自动备份本机数据目录，并同步重建云端 API，验证更新不会覆盖公司人员。";
+    var notes = configuration["Update:Notes"] ?? "1.0.11 资料中心云端版：普通资料支持上传到服务器、下载时选择保存位置、资料和云盘链接可密码确认删除，云盘链接支持一键复制，并优化总览项目跳转。";
 
     return Results.Ok(new
     {
@@ -111,6 +111,74 @@ app.MapPost("/api/files", async (PostgresSchedulerRepository repo, AddProjectFil
     await repo.AddProjectFileAsync(request);
     return Results.Ok();
 });
+app.MapPost("/api/files/upload", async (PostgresSchedulerRepository repo, IWebHostEnvironment environment, HttpRequest request) =>
+{
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest("缺少上传文件。");
+    }
+
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("file");
+    if (file is null || file.Length == 0)
+    {
+        return Results.BadRequest("请选择需要上传的文件。");
+    }
+
+    if (!int.TryParse(form["projectId"], out var projectId))
+    {
+        return Results.BadRequest("项目编号无效。");
+    }
+
+    var projectCode = SanitizePathPart(form["projectCode"].ToString());
+    var category = form["category"].ToString();
+    var safeCategory = SanitizePathPart(category);
+    var safeFileName = SanitizeFileName(file.FileName);
+    var uploadsRoot = Path.Combine(environment.ContentRootPath, "ProjectFiles", projectCode, safeCategory);
+    Directory.CreateDirectory(uploadsRoot);
+
+    var storedFileName = $"{DateTime.Now:yyyyMMddHHmmssfff}-{safeFileName}";
+    var storedPath = Path.Combine(uploadsRoot, storedFileName);
+    await using (var stream = File.Create(storedPath))
+    {
+        await file.CopyToAsync(stream);
+    }
+
+    var fileId = await repo.AddProjectFileAndReturnIdAsync(new AddProjectFileRequest(projectId, category, file.FileName, storedPath));
+    return Results.Ok(new { id = fileId });
+});
+app.MapGet("/api/files/{fileId:int}/download", async (PostgresSchedulerRepository repo, int fileId) =>
+{
+    var file = await repo.GetProjectFileAsync(fileId);
+    if (file is null || !File.Exists(file.FilePath))
+    {
+        return Results.NotFound("文件不存在。");
+    }
+
+    return Results.File(file.FilePath, "application/octet-stream", file.FileName);
+});
+app.MapDelete("/api/files/{fileId:int}", async (PostgresSchedulerRepository repo, int fileId) =>
+{
+    var file = await repo.DeleteProjectFileAsync(fileId);
+    if (file is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (File.Exists(file.FilePath))
+    {
+        try
+        {
+            File.Delete(file.FilePath);
+        }
+        catch
+        {
+            // 文件可能被系统占用，数据库记录已删除，后续可由服务器清理任务处理。
+        }
+    }
+
+    return Results.Ok();
+});
 app.MapPut("/api/stages/{stageId:int}/toggle", async (PostgresSchedulerRepository repo, int stageId, ToggleStageRequest request) =>
 {
     await repo.ToggleStageAsync(stageId, request.Complete);
@@ -118,3 +186,20 @@ app.MapPut("/api/stages/{stageId:int}/toggle", async (PostgresSchedulerRepositor
 });
 
 app.Run();
+
+static string SanitizePathPart(string value)
+{
+    var fallback = string.IsNullOrWhiteSpace(value) ? "未分类" : value.Trim();
+    foreach (var invalid in Path.GetInvalidFileNameChars())
+    {
+        fallback = fallback.Replace(invalid, '_');
+    }
+
+    return fallback;
+}
+
+static string SanitizeFileName(string value)
+{
+    var fileName = Path.GetFileName(value);
+    return SanitizePathPart(fileName);
+}
