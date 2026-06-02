@@ -244,6 +244,9 @@ public partial class MainViewModel : ViewModelBase
     private string updateStatusText = "当前版本";
 
     [ObservableProperty]
+    private string cloudStorageStatusText = "云端存储：检测中";
+
+    [ObservableProperty]
     private DashboardCard? expandedDashboardCard;
 
     [ObservableProperty]
@@ -307,10 +310,12 @@ public partial class MainViewModel : ViewModelBase
             var snapshot = _repository.GetSnapshot();
             RefreshCollections(snapshot);
             UpdateConnectionStatus(true);
+            RefreshCloudStorageStatus();
         }
         catch (Exception ex)
         {
             UpdateConnectionStatus(false);
+            CloudStorageStatusText = "云端存储：暂未获取";
             MessageBox.Show(ex.Message, "同步失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -1028,8 +1033,20 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        Clipboard.SetText(file.FilePath.Trim());
-        MessageBox.Show("云盘链接已复制。", "复制完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        var link = file.FilePath.Trim();
+        if (TrySetClipboardText(link, out var errorMessage))
+        {
+            MessageBox.Show("云盘链接已复制到剪贴板。", "复制完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        MessageBox.Show(
+            string.IsNullOrWhiteSpace(errorMessage)
+                ? "复制失败，剪贴板可能正被其他程序占用，请稍后再试。"
+                : $"复制失败：{errorMessage}\n请稍后再试，或手动复制链接。",
+            "复制失败",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
     }
 
     [RelayCommand]
@@ -1258,6 +1275,63 @@ public partial class MainViewModel : ViewModelBase
             ? online ? "云端在线" : "云端离线"
             : "本机模式";
         LastSyncText = online ? $"上次同步 {DateTime.Now:HH:mm:ss}" : "同步失败";
+    }
+
+    private void RefreshCloudStorageStatus()
+    {
+        try
+        {
+            var status = _repository.GetCloudStorageStatus();
+            var label = status.IsCloud ? "云端存储" : "本机存储";
+            CloudStorageStatusText = status.TotalBytes > 0
+                ? $"{label}：剩余 {FormatBytes(status.AvailableBytes)} / 总计 {FormatBytes(status.TotalBytes)}"
+                : $"{label}：暂未获取";
+        }
+        catch
+        {
+            CloudStorageStatusText = _repository.IsCloudMode
+                ? "云端存储：暂未获取"
+                : "本机存储：暂未获取";
+        }
+    }
+
+    private static bool TrySetClipboardText(string text, out string? errorMessage)
+    {
+        Exception? lastException = null;
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                Clipboard.SetDataObject(text, copy: true);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                Thread.Sleep(80);
+            }
+        }
+
+        errorMessage = lastException?.Message;
+        return false;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = Math.Max(0, bytes);
+        var unitIndex = 0;
+        var displayValue = (double)value;
+        while (displayValue >= 1024 && unitIndex < units.Length - 1)
+        {
+            displayValue /= 1024;
+            unitIndex++;
+        }
+
+        return unitIndex == 0
+            ? $"{value} {units[unitIndex]}"
+            : $"{displayValue:0.0} {units[unitIndex]}";
     }
 
     public bool ConfirmCloseAndSave()

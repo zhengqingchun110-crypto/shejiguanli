@@ -133,6 +133,10 @@ public sealed class ApiSchedulerRepository : ISchedulerRepository, IDisposable
     public void DeleteProjectFile(int fileId) =>
         Delete($"api/files/{fileId}");
 
+    public CloudStorageStatus GetCloudStorageStatus() =>
+        Send(() => _httpClient.GetFromJsonAsync<CloudStorageStatus>("api/storage", _jsonOptions))
+        ?? new CloudStorageStatus { IsCloud = true, CheckedAt = DateTime.Now };
+
     public void ToggleStageCompletion(int stageId, bool complete) =>
         Put($"api/stages/{stageId}/toggle", new { complete });
 

@@ -30,5 +30,6 @@ public interface ISchedulerRepository
     void UploadProjectFile(int projectId, string projectCode, string category, string sourcePath);
     void DownloadProjectFile(ProjectFileRecord file, string destinationPath);
     void DeleteProjectFile(int fileId);
+    CloudStorageStatus GetCloudStorageStatus();
     void ToggleStageCompletion(int stageId, bool complete);
 }

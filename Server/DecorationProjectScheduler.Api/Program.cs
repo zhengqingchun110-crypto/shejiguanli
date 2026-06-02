@@ -1,5 +1,7 @@
 ﻿using DecorationProjectScheduler.Api;
 
+using DecorationProjectScheduler.App.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
@@ -19,9 +21,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.11";
+    var version = configuration["Update:Version"] ?? "1.0.12";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.11 资料中心云端版：普通资料支持上传到服务器、下载时选择保存位置、资料和云盘链接可密码确认删除，云盘链接支持一键复制，并优化总览项目跳转。";
+    var notes = configuration["Update:Notes"] ?? "1.0.12 稳定修复版：修复复制云盘链接时可能崩溃的问题，复制成功后明确提示已复制到剪贴板，并在资料中心底部显示云端存储剩余量。";
 
     return Results.Ok(new
     {
@@ -31,6 +33,22 @@ app.MapGet("/api/update/latest", (IConfiguration configuration) =>
     });
 });
 app.MapGet("/api/workspace", (PostgresSchedulerRepository repo) => repo.GetSnapshotAsync());
+app.MapGet("/api/storage", (IWebHostEnvironment environment) =>
+{
+    var storageRoot = Path.Combine(environment.ContentRootPath, "ProjectFiles");
+    Directory.CreateDirectory(storageRoot);
+    var rootPath = Path.GetFullPath(storageRoot);
+    var driveRoot = Path.GetPathRoot(rootPath) ?? rootPath;
+    var drive = new DriveInfo(driveRoot);
+
+    return Results.Ok(new CloudStorageStatus
+    {
+        IsCloud = true,
+        AvailableBytes = drive.AvailableFreeSpace,
+        TotalBytes = drive.TotalSize,
+        CheckedAt = DateTime.Now
+    });
+});
 
 app.MapPost("/api/employees", async (PostgresSchedulerRepository repo, AddEmployeeRequest request) =>
 {

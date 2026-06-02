@@ -12,6 +12,8 @@ public sealed class FileStorageService
         Directory.CreateDirectory(_rootDirectory);
     }
 
+    public string RootDirectory => _rootDirectory;
+
     public string SaveProjectFile(string projectCode, string category, string sourcePath)
     {
         var categoryDirectory = Path.Combine(_rootDirectory, projectCode, category);

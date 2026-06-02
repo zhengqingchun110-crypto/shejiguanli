@@ -1060,6 +1060,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBox Text="{Binding ProjectSearchKeyword, UpdateSourceTrigger=PropertyChanged}"
@@ -1109,10 +1110,21 @@
 
                             <ScrollViewer Grid.Row="1"
                                           VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Margin="0,0,0,14">
                                 <ItemsControl ItemsSource="{Binding ResourceSections}"
                                               ItemTemplate="{StaticResource ResourceSectionTemplate}" />
                             </ScrollViewer>
+
+                            <Border Grid.Row="2"
+                                    Background="#EEF3F4F7"
+                                    CornerRadius="18"
+                                    Padding="14">
+                                <TextBlock Text="{Binding CloudStorageStatusText}"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </Border>
                         </Grid>
                     </Border>
                 </Grid>

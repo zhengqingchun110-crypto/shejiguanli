@@ -492,6 +492,21 @@ public sealed class SchedulerRepository : ISchedulerRepository
         RaiseChanged();
     }
 
+    public CloudStorageStatus GetCloudStorageStatus()
+    {
+        Directory.CreateDirectory(_fileStorageService.RootDirectory);
+        var rootPath = Path.GetFullPath(_fileStorageService.RootDirectory);
+        var driveRoot = Path.GetPathRoot(rootPath) ?? rootPath;
+        var drive = new DriveInfo(driveRoot);
+        return new CloudStorageStatus
+        {
+            IsCloud = false,
+            AvailableBytes = drive.AvailableFreeSpace,
+            TotalBytes = drive.TotalSize,
+            CheckedAt = DateTime.Now
+        };
+    }
+
     public void ToggleStageCompletion(int stageId, bool complete)
     {
         using var connection = new SqliteConnection(_connectionString);
