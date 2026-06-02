@@ -611,6 +611,17 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ExportAllPersonnelWork()
+    {
+        if (!ConfirmExport("确定导出所有部门人员工作 PDF 吗？"))
+        {
+            return;
+        }
+
+        TryExport(() => PdfExportService.ExportAllPersonnelWork(DepartmentPages));
+    }
+
+    [RelayCommand]
     private void ExportActiveProjects()
     {
         if (!ConfirmExport("确定导出当前正在进行的项目 PDF 吗？"))
@@ -621,12 +632,9 @@ public partial class MainViewModel : ViewModelBase
         TryExport(() =>
         {
             var snapshot = _repository.GetSnapshot();
-            var summaries = BuildProjectSummaries(snapshot)
-                .Where(project => IsActiveProject(project, snapshot))
-                .OrderBy(project => project.EndDate)
-                .ToList();
+            var activeProjects = BuildActiveProjectExportItems(snapshot);
 
-            return PdfExportService.ExportProjectList("当前正在进行的项目", summaries, "项目导出", "进行中项目");
+            return PdfExportService.ExportActiveProjectDetails(activeProjects);
         });
     }
 
@@ -671,8 +679,10 @@ public partial class MainViewModel : ViewModelBase
         var operators = EditableProjectOperators.Trim();
         var summary = EditableProjectSummary.Trim();
         var taskPlan = EditableTaskPlanText.Trim();
+        var snapshot = _repository.GetSnapshot();
+        var workItems = BuildOpenWorkItems(project.ProjectId, snapshot);
 
-        TryExport(() => PdfExportService.ExportProjectDetail(project, projectType, operators, summary, taskPlan));
+        TryExport(() => PdfExportService.ExportProjectDetail(project, projectType, operators, summary, taskPlan, workItems));
     }
 
     [RelayCommand]
@@ -1478,6 +1488,49 @@ public partial class MainViewModel : ViewModelBase
         }).ToList();
     }
 
+    private static List<ActiveProjectExportItem> BuildActiveProjectExportItems(WorkspaceSnapshot snapshot)
+    {
+        var summaries = BuildProjectSummaries(snapshot)
+            .Where(project => HasOpenTask(project, snapshot))
+            .OrderBy(project => project.EndDate)
+            .ToList();
+
+        return summaries.Select(summary =>
+        {
+            var project = snapshot.Projects.FirstOrDefault(item => item.Id == summary.ProjectId);
+            var workItems = BuildOpenWorkItems(summary.ProjectId, snapshot);
+
+            return new ActiveProjectExportItem
+            {
+                Project = summary,
+                ProjectDetail = project?.Summary ?? summary.Summary,
+                TaskPlan = project?.TaskPlan ?? string.Empty,
+                WorkItems = workItems
+            };
+        }).ToList();
+    }
+
+    private static List<ActiveProjectWorkItem> BuildOpenWorkItems(int projectId, WorkspaceSnapshot snapshot)
+    {
+        return snapshot.Tasks
+            .Where(task => task.ProjectId == projectId && !string.Equals(task.Status, "已完成", StringComparison.Ordinal))
+            .OrderBy(task => task.EndDate)
+            .Select(task =>
+            {
+                var owner = snapshot.Employees.FirstOrDefault(employee => employee.Id == task.OwnerId);
+                return new ActiveProjectWorkItem
+                {
+                    EmployeeName = owner?.Name ?? "未分配人员",
+                    DepartmentName = ResolveEmployeeDepartment(owner),
+                    TaskName = task.Name,
+                    Status = task.Status,
+                    SubmissionDate = task.EndDate,
+                    DaysUntilSubmission = FormatDaysUntil(task.EndDate)
+                };
+            })
+            .ToList();
+    }
+
     private static IEnumerable<ProjectYearGroup> BuildProjectTree(IEnumerable<ProjectSummary> summaries)
     {
         return summaries
@@ -1677,6 +1730,17 @@ public partial class MainViewModel : ViewModelBase
         }
 
         return DepartmentNames.Contains(employee.Department) ? employee.Department : DepartmentNames[0];
+    }
+
+    private static string FormatDaysUntil(DateTime submissionDate)
+    {
+        var days = (submissionDate.Date - DateTime.Today).Days;
+        return days switch
+        {
+            > 0 => $"还有 {days} 天",
+            0 => "今天提交",
+            _ => $"已延期 {Math.Abs(days)} 天"
+        };
     }
 
     private static bool IsActiveProject(ProjectSummary project, WorkspaceSnapshot snapshot)

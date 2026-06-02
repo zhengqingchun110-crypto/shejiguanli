@@ -21,9 +21,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.13";
+    var version = configuration["Update:Version"] ?? "1.0.14";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.13 资料中心更新：修复复制云盘链接时可能崩溃的问题，调整云端存储展示位置，新增上传资料文件大小显示，并升级云端文件大小字段。";
+    var notes = configuration["Update:Notes"] ?? "1.0.14 导出增强：总览与单项目导出加入详情、跟进计划和正在操作人员；人员管理新增导出所有人员工作；人员 PDF 合并相同姓名并压缩字号，提升一页展示量。";
 
     return Results.Ok(new
     {
