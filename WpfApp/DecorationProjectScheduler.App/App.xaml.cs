@@ -58,8 +58,8 @@ public partial class App : Application
         {
             DataContext = new MainViewModel(repository, themeService, updateService),
             Title = string.IsNullOrWhiteSpace(apiBaseUrl)
-                ? "设计项目管理 - 本机模式"
-                : "设计项目管理 - 云端模式"
+                ? "凡响智道 - 本机模式"
+                : "凡响智道 - 云端模式"
         };
         MainWindow = mainWindow;
         mainWindow.Show();

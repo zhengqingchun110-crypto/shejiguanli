@@ -27,8 +27,7 @@ public partial class MainViewModel : ViewModelBase
         [
             new NavigationMenuItem { Title = "总览" },
             new NavigationMenuItem { Title = "人员管理" },
-            new NavigationMenuItem { Title = "项目中心" },
-            new NavigationMenuItem { Title = "资料中心" }
+            new NavigationMenuItem { Title = "项目中心" }
         ];
 
         FilterStatuses =
@@ -250,7 +249,6 @@ public partial class MainViewModel : ViewModelBase
     public Visibility NonProjectContentVisibility => IsMenu("项目中心") ? Visibility.Collapsed : Visibility.Visible;
     public Visibility ProjectDetailVisibility => Visibility.Collapsed;
     public Visibility TimelineVisibility => Visibility.Collapsed;
-    public Visibility FilesVisibility => IsMenu("资料中心") ? Visibility.Visible : Visibility.Collapsed;
 
     partial void OnSelectedProjectStatusChanged(string value) => ApplyProjectFilters();
     partial void OnProjectSearchKeywordChanged(string value) => ApplyProjectFilters();
@@ -265,7 +263,6 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(PeopleVisibility));
         OnPropertyChanged(nameof(ProjectCenterVisibility));
         OnPropertyChanged(nameof(NonProjectContentVisibility));
-        OnPropertyChanged(nameof(FilesVisibility));
         OnPropertyChanged(nameof(DashboardDetailVisibility));
     }
 
@@ -573,9 +570,8 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var startDate = DateTime.Today;
+        var startDate = NewProjectStartDate.Date;
         var endDate = startDate.AddDays(45);
-        NewProjectStartDate = startDate;
         NewProjectEndDate = endDate;
 
         _repository.CreateProject(
@@ -1096,12 +1092,8 @@ public partial class MainViewModel : ViewModelBase
     private static IEnumerable<DashboardCard> BuildDashboardCards(WorkspaceSnapshot snapshot, List<ProjectSummary> summaries)
     {
         var activeProjects = summaries
-            .Where(project => IsActiveProject(project, snapshot))
+            .Where(project => HasOpenTask(project, snapshot))
             .OrderBy(project => project.EndDate)
-            .ToList();
-        var activeTasks = snapshot.Tasks
-            .Where(task => !string.Equals(task.Status, "已完成", StringComparison.Ordinal))
-            .OrderBy(task => task.EndDate)
             .ToList();
         var dueTasks = snapshot.Tasks
             .Where(task =>
@@ -1132,16 +1124,8 @@ public partial class MainViewModel : ViewModelBase
                 Key = "ActiveProjects",
                 Title = "进行中项目",
                 Value = activeProjects.Count.ToString(),
-                Subtitle = "未归档且仍有未完成任务或节点",
-                Groups = BuildProjectDashboardGroups("项目列表", activeProjects)
-            },
-            new DashboardCard
-            {
-                Key = "ActiveTasks",
-                Title = "未完成任务",
-                Value = activeTasks.Count.ToString(),
-                Subtitle = "按项目查看对应人员和具体工作",
-                Groups = BuildProjectTaskDashboardGroups(activeTasks, snapshot)
+                Subtitle = "按项目查看全部人员和对应任务",
+                Groups = BuildActiveProjectDashboardGroups(activeProjects, snapshot)
             },
             new DashboardCard
             {
@@ -1203,6 +1187,45 @@ public partial class MainViewModel : ViewModelBase
         ];
     }
 
+    private static List<DashboardDetailGroup> BuildActiveProjectDashboardGroups(IEnumerable<ProjectSummary> projects, WorkspaceSnapshot snapshot)
+    {
+        return projects
+            .Select(project =>
+            {
+                var tasks = snapshot.Tasks
+                    .Where(task => task.ProjectId == project.ProjectId && !string.Equals(task.Status, "已完成", StringComparison.Ordinal))
+                    .OrderBy(task => task.EndDate)
+                    .ToList();
+
+                return new DashboardDetailGroup
+                {
+                    Title = project.Name,
+                    Items = tasks.Count == 0
+                        ? [new DashboardDetailItem
+                        {
+                            Title = string.Empty,
+                            Subtitle = string.Empty,
+                            TargetType = "Project",
+                            TargetId = project.ProjectId
+                        }]
+                        : tasks.Select(task =>
+                        {
+                            var owner = snapshot.Employees.FirstOrDefault(employee => employee.Id == task.OwnerId);
+                            return new DashboardDetailItem
+                            {
+                                Title = owner?.Name ?? string.Empty,
+                                Subtitle = task.Name,
+                                TargetType = owner is null ? "Project" : "Task",
+                                TargetId = owner?.Id ?? project.ProjectId,
+                                DepartmentName = ResolveEmployeeDepartment(owner)
+                            };
+                        }).ToList()
+                };
+            })
+            .OrderBy(group => group.Title)
+            .ToList();
+    }
+
     private static List<DashboardDetailGroup> BuildProjectTaskDashboardGroups(IEnumerable<WorkTask> tasks, WorkspaceSnapshot snapshot)
     {
         return tasks
@@ -1261,6 +1284,11 @@ public partial class MainViewModel : ViewModelBase
 
         return hasOpenTask || hasOpenStage || project.EndDate.Date >= DateTime.Today;
     }
+
+    private static bool HasOpenTask(ProjectSummary project, WorkspaceSnapshot snapshot) =>
+        snapshot.Tasks.Any(task =>
+            task.ProjectId == project.ProjectId
+            && !string.Equals(task.Status, "已完成", StringComparison.Ordinal));
 
     private static List<ProjectOption> BuildProjectOptions(WorkspaceSnapshot snapshot)
     {
