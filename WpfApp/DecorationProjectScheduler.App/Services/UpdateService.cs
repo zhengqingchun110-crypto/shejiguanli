@@ -63,6 +63,8 @@ public sealed class UpdateService
             throw new InvalidOperationException("没有找到自动更新程序，请使用正式发布版更新。");
         }
 
+        BackupLocalAppData();
+
         var packageDirectory = Path.Combine(
             Path.GetTempPath(),
             "DecorationProjectScheduler",
@@ -110,6 +112,38 @@ public sealed class UpdateService
         {
             UseShellExecute = true
         });
+    }
+
+    private static void BackupLocalAppData()
+    {
+        var appRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DecorationProjectScheduler");
+        if (!Directory.Exists(appRoot))
+        {
+            return;
+        }
+
+        var backupRoot = Path.Combine(appRoot, "Backups", "BeforeUpdate-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+        CopyDirectory(appRoot, backupRoot, backupRoot);
+    }
+
+    private static void CopyDirectory(string sourceDirectory, string targetDirectory, string excludedRoot)
+    {
+        Directory.CreateDirectory(targetDirectory);
+
+        foreach (var file in Directory.EnumerateFiles(sourceDirectory))
+        {
+            File.Copy(file, Path.Combine(targetDirectory, Path.GetFileName(file)), true);
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory))
+        {
+            if (Path.GetFullPath(directory).StartsWith(Path.GetFullPath(excludedRoot), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            CopyDirectory(directory, Path.Combine(targetDirectory, Path.GetFileName(directory)), excludedRoot);
+        }
     }
 
     private sealed class UpdateManifest
