@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DecorationProjectScheduler.App.Helpers;
 using DecorationProjectScheduler.App.Models;
 using DecorationProjectScheduler.App.Repositories;
 using DecorationProjectScheduler.App.Services;
@@ -1297,24 +1298,7 @@ public partial class MainViewModel : ViewModelBase
 
     private static bool TrySetClipboardText(string text, out string? errorMessage)
     {
-        Exception? lastException = null;
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            try
-            {
-                Clipboard.SetDataObject(text, copy: true);
-                errorMessage = null;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                lastException = ex;
-                Thread.Sleep(80);
-            }
-        }
-
-        errorMessage = lastException?.Message;
-        return false;
+        return ClipboardTextService.TrySetText(text, out errorMessage);
     }
 
     private static string FormatBytes(long bytes)

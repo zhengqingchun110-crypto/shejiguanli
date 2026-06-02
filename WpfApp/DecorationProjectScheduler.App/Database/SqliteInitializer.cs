@@ -104,6 +104,7 @@ public sealed class SqliteInitializer
                 Category TEXT NOT NULL,
                 FileName TEXT NOT NULL,
                 FilePath TEXT NOT NULL,
+                FileSizeBytes INTEGER NOT NULL DEFAULT 0,
                 UploadedAt TEXT NOT NULL
             );
 
@@ -121,6 +122,7 @@ public sealed class SqliteInitializer
         EnsureColumn(connection, "Projects", "ProjectType", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Projects", "OperatorNames", "TEXT NOT NULL DEFAULT ''");
         EnsureColumn(connection, "Projects", "TaskPlan", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(connection, "ProjectFiles", "FileSizeBytes", "INTEGER NOT NULL DEFAULT 0");
         NormalizeVisibleEnglish(connection);
 
         // 正式版只负责建表和补字段，不能在更新或换目录时自动写入示例人员/项目。

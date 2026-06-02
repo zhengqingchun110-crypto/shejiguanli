@@ -21,9 +21,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.12";
+    var version = configuration["Update:Version"] ?? "1.0.13";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.12 稳定修复版：修复复制云盘链接时可能崩溃的问题，复制成功后明确提示已复制到剪贴板，并在资料中心底部显示云端存储剩余量。";
+    var notes = configuration["Update:Notes"] ?? "1.0.13 资料中心更新：修复复制云盘链接时可能崩溃的问题，调整云端存储展示位置，新增上传资料文件大小显示，并升级云端文件大小字段。";
 
     return Results.Ok(new
     {
@@ -162,7 +162,7 @@ app.MapPost("/api/files/upload", async (PostgresSchedulerRepository repo, IWebHo
         await file.CopyToAsync(stream);
     }
 
-    var fileId = await repo.AddProjectFileAndReturnIdAsync(new AddProjectFileRequest(projectId, category, file.FileName, storedPath));
+    var fileId = await repo.AddProjectFileAndReturnIdAsync(new AddProjectFileRequest(projectId, category, file.FileName, storedPath, file.Length));
     return Results.Ok(new { id = fileId });
 });
 app.MapGet("/api/files/{fileId:int}/download", async (PostgresSchedulerRepository repo, int fileId) =>

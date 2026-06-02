@@ -102,6 +102,7 @@ public sealed class PostgresSchedulerRepository
                 category TEXT NOT NULL,
                 file_name TEXT NOT NULL,
                 file_path TEXT NOT NULL,
+                file_size_bytes BIGINT NOT NULL DEFAULT 0,
                 uploaded_at TIMESTAMP NOT NULL
             );
 
@@ -114,6 +115,7 @@ public sealed class PostgresSchedulerRepository
                 completed_at TIMESTAMP NOT NULL
             );
             """);
+        await ExecuteAsync(connection, "ALTER TABLE project_files ADD COLUMN IF NOT EXISTS file_size_bytes BIGINT NOT NULL DEFAULT 0;");
         // 正式版只初始化表结构，不自动写入演示员工，避免更新或迁移时污染公司人员数据。
     }
 
@@ -371,13 +373,14 @@ public sealed class PostgresSchedulerRepository
     public async Task AddProjectFileAsync(AddProjectFileRequest request)
     {
         await ExecuteAsync("""
-            INSERT INTO project_files (project_id, category, file_name, file_path, uploaded_at)
-            VALUES (@projectId, @category, @fileName, @filePath, @uploadedAt);
+            INSERT INTO project_files (project_id, category, file_name, file_path, file_size_bytes, uploaded_at)
+            VALUES (@projectId, @category, @fileName, @filePath, @fileSizeBytes, @uploadedAt);
             """,
             ("projectId", request.ProjectId),
             ("category", request.Category),
             ("fileName", request.FileName),
             ("filePath", request.FilePath),
+            ("fileSizeBytes", request.FileSizeBytes),
             ("uploadedAt", DateTime.Now));
         await TouchProjectAsync(request.ProjectId);
     }
@@ -385,14 +388,15 @@ public sealed class PostgresSchedulerRepository
     public async Task<int> AddProjectFileAndReturnIdAsync(AddProjectFileRequest request)
     {
         var fileId = await ScalarAsync<int>("""
-            INSERT INTO project_files (project_id, category, file_name, file_path, uploaded_at)
-            VALUES (@projectId, @category, @fileName, @filePath, @uploadedAt)
+            INSERT INTO project_files (project_id, category, file_name, file_path, file_size_bytes, uploaded_at)
+            VALUES (@projectId, @category, @fileName, @filePath, @fileSizeBytes, @uploadedAt)
             RETURNING id;
             """,
             ("projectId", request.ProjectId),
             ("category", request.Category),
             ("fileName", request.FileName),
             ("filePath", request.FilePath),
+            ("fileSizeBytes", request.FileSizeBytes),
             ("uploadedAt", DateTime.Now));
         await TouchProjectAsync(request.ProjectId);
         return fileId;
@@ -571,12 +575,12 @@ public sealed class PostgresSchedulerRepository
 
     private static async Task<List<ProjectFileRecord>> ReadFilesAsync(NpgsqlConnection connection)
     {
-        await using var command = new NpgsqlCommand("SELECT id, project_id, category, file_name, file_path, uploaded_at FROM project_files ORDER BY uploaded_at DESC;", connection);
+        await using var command = new NpgsqlCommand("SELECT id, project_id, category, file_name, file_path, file_size_bytes, uploaded_at FROM project_files ORDER BY uploaded_at DESC;", connection);
         await using var reader = await command.ExecuteReaderAsync();
         var list = new List<ProjectFileRecord>();
         while (await reader.ReadAsync())
         {
-            list.Add(new ProjectFileRecord { Id = reader.GetInt32(0), ProjectId = reader.GetInt32(1), Category = reader.GetString(2), FileName = reader.GetString(3), FilePath = reader.GetString(4), UploadedAt = reader.GetDateTime(5) });
+            list.Add(new ProjectFileRecord { Id = reader.GetInt32(0), ProjectId = reader.GetInt32(1), Category = reader.GetString(2), FileName = reader.GetString(3), FilePath = reader.GetString(4), FileSizeBytes = ResolveFileSizeBytes(reader.GetString(4), reader.GetInt64(5)), UploadedAt = reader.GetDateTime(6) });
         }
 
         return list;
@@ -587,7 +591,7 @@ public sealed class PostgresSchedulerRepository
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
         await using var command = CreateCommand(connection, $"""
-            SELECT id, project_id, category, file_name, file_path, uploaded_at
+            SELECT id, project_id, category, file_name, file_path, file_size_bytes, uploaded_at
             FROM project_files
             {whereSql}
             LIMIT 1;
@@ -607,8 +611,26 @@ public sealed class PostgresSchedulerRepository
             Category = reader.GetString(2),
             FileName = reader.GetString(3),
             FilePath = reader.GetString(4),
-            UploadedAt = reader.GetDateTime(5)
+            FileSizeBytes = ResolveFileSizeBytes(reader.GetString(4), reader.GetInt64(5)),
+            UploadedAt = reader.GetDateTime(6)
         };
+    }
+
+    private static long ResolveFileSizeBytes(string filePath, long storedSizeBytes)
+    {
+        if (storedSizeBytes > 0)
+        {
+            return storedSizeBytes;
+        }
+
+        try
+        {
+            return File.Exists(filePath) ? new FileInfo(filePath).Length : 0;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private static async Task<List<ProjectFollowUp>> ReadFollowUpsAsync(NpgsqlConnection connection)

@@ -257,7 +257,7 @@
                                 CornerRadius="18"
                                 Padding="14">
                             <StackPanel>
-                                <TextBlock Text="本地上传资料"
+                                <TextBlock Text="上传资料"
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            Margin="0,0,0,10" />
@@ -283,8 +283,12 @@
                                                         <TextBlock Text="{Binding FileName}"
                                                                    FontWeight="SemiBold"
                                                                    TextWrapping="Wrap" />
-                                                        <TextBlock Text="{Binding UploadedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}"
+                                                        <TextBlock Text="{Binding UploadedAtText}"
                                                                    Margin="0,4,0,0"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        <TextBlock Text="{Binding FileSizeText}"
+                                                                   Margin="0,3,0,0"
+                                                                   FontWeight="SemiBold"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}" />
                                                     </StackPanel>
                                                     <Button Grid.Column="1"
@@ -1079,6 +1083,19 @@
                                     </Style>
                                 </TreeView.ItemContainerStyle>
                             </TreeView>
+
+                            <Border Grid.Row="2"
+                                    HorizontalAlignment="Right"
+                                    Background="#FAFBFC"
+                                    CornerRadius="15"
+                                    Padding="12,8"
+                                    Margin="0,14,0,0">
+                                <TextBlock Text="{Binding CloudStorageStatusText}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Border>
                         </Grid>
                     </Border>
 
@@ -1111,20 +1128,10 @@
                             <ScrollViewer Grid.Row="1"
                                           VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
-                                          Margin="0,0,0,14">
+                                          Margin="0">
                                 <ItemsControl ItemsSource="{Binding ResourceSections}"
                                               ItemTemplate="{StaticResource ResourceSectionTemplate}" />
                             </ScrollViewer>
-
-                            <Border Grid.Row="2"
-                                    Background="#EEF3F4F7"
-                                    CornerRadius="18"
-                                    Padding="14">
-                                <TextBlock Text="{Binding CloudStorageStatusText}"
-                                           FontSize="15"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextSecondaryBrush}" />
-                            </Border>
                         </Grid>
                     </Border>
                 </Grid>

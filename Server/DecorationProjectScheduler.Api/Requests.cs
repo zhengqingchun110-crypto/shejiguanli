@@ -39,6 +39,6 @@ public sealed record AddSiteVisitRequest(int ProjectId, DateTime VisitDate, stri
 
 public sealed record AddAcceptanceRequest(int ProjectId, DateTime AcceptanceDate, string Result, string RectificationItems, string ReviewRecord, string Status);
 
-public sealed record AddProjectFileRequest(int ProjectId, string Category, string FileName, string FilePath);
+public sealed record AddProjectFileRequest(int ProjectId, string Category, string FileName, string FilePath, long FileSizeBytes = 0);
 
 public sealed record ToggleStageRequest(bool Complete);

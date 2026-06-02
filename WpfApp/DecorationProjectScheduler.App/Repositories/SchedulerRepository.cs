@@ -423,14 +423,16 @@ public sealed class SchedulerRepository : ISchedulerRepository
 
     public void AddProjectFile(int projectId, string category, string fileName, string filePath)
     {
+        var fileSizeBytes = TryGetFileSizeBytes(filePath);
         ExecuteNonQuery("""
-            INSERT INTO ProjectFiles (ProjectId, Category, FileName, FilePath, UploadedAt)
-            VALUES ($projectId, $category, $fileName, $filePath, $uploadedAt);
+            INSERT INTO ProjectFiles (ProjectId, Category, FileName, FilePath, FileSizeBytes, UploadedAt)
+            VALUES ($projectId, $category, $fileName, $filePath, $fileSizeBytes, $uploadedAt);
             """,
             ("$projectId", projectId),
             ("$category", category),
             ("$fileName", fileName),
             ("$filePath", filePath),
+            ("$fileSizeBytes", fileSizeBytes),
             ("$uploadedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
 
         TouchProject(projectId);
@@ -793,7 +795,7 @@ public sealed class SchedulerRepository : ISchedulerRepository
     {
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, ProjectId, Category, FileName, FilePath, UploadedAt
+            SELECT Id, ProjectId, Category, FileName, FilePath, FileSizeBytes, UploadedAt
             FROM ProjectFiles
             ORDER BY UploadedAt DESC;
             """;
@@ -808,11 +810,29 @@ public sealed class SchedulerRepository : ISchedulerRepository
                 Category = reader.GetString(2),
                 FileName = reader.GetString(3),
                 FilePath = reader.GetString(4),
-                UploadedAt = DateTime.Parse(reader.GetString(5))
+                FileSizeBytes = ResolveFileSizeBytes(reader.GetString(4), reader.GetInt64(5)),
+                UploadedAt = DateTime.Parse(reader.GetString(6))
             });
         }
 
         return list;
+    }
+
+    private static long ResolveFileSizeBytes(string filePath, long storedSizeBytes)
+    {
+        return storedSizeBytes > 0 ? storedSizeBytes : TryGetFileSizeBytes(filePath);
+    }
+
+    private static long TryGetFileSizeBytes(string filePath)
+    {
+        try
+        {
+            return File.Exists(filePath) ? new FileInfo(filePath).Length : 0;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private static List<ProjectFollowUp> ReadProjectFollowUps(SqliteConnection connection)
