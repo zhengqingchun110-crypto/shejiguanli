@@ -396,7 +396,7 @@
                               Visibility="{Binding OverviewVisibility}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel HorizontalAlignment="Center" />
+                            <UniformGrid Columns="4" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -405,14 +405,15 @@
                                     CommandParameter="{Binding}"
                                     Background="Transparent"
                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
                                     Padding="0"
-                                    Width="270"
                                     Height="188"
-                                    Margin="0,0,18,0">
+                                    Margin="0">
                                 <Border CornerRadius="26"
                                         Padding="22"
-                                        Width="270"
                                         Height="188"
+                                        HorizontalAlignment="Stretch"
                                         Background="#F9FAFC"
                                         BorderBrush="#E6E8EE"
                                         BorderThickness="1">
