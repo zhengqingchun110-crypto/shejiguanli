@@ -93,6 +93,11 @@ static void ExtractPackage(string packagePath, string installDirectory)
             continue;
         }
 
+        if (ShouldSkipFile(destination) && File.Exists(destination))
+        {
+            continue;
+        }
+
         entry.ExtractToFile(destination, true);
     }
 }

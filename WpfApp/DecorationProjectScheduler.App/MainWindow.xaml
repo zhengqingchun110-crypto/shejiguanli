@@ -394,6 +394,12 @@
                               Margin="0,0,0,20"
                               HorizontalContentAlignment="Stretch"
                               Visibility="{Binding OverviewVisibility}">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                            <Setter Property="VerticalAlignment" Value="Stretch" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="4" />
@@ -407,6 +413,7 @@
                                     Foreground="{DynamicResource TextPrimaryBrush}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch"
                                     Padding="0"
                                     Height="188"
                                     Margin="0">
@@ -414,6 +421,7 @@
                                         Padding="22"
                                         Height="188"
                                         HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch"
                                         Background="#F9FAFC"
                                         BorderBrush="#E6E8EE"
                                         BorderThickness="1">

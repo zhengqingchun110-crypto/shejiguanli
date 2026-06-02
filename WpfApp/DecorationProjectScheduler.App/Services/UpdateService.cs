@@ -75,8 +75,7 @@ public sealed class UpdateService
         }
 
         var currentProcess = Process.GetCurrentProcess();
-        var executablePath = Environment.ProcessPath
-            ?? Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.App.exe");
+        var executablePath = Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.App.exe");
 
         var startInfo = new ProcessStartInfo(updaterPath)
         {

@@ -19,9 +19,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.7";
+    var version = configuration["Update:Version"] ?? "1.0.8";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.7 更新：总览四个大标签改为四等分铺满整行，总长度与上方总览栏对齐，用于验证一键自动更新流程。";
+    var notes = configuration["Update:Notes"] ?? "1.0.8 更新：总览四个大标签改为完全等宽等高并与上方总宽度对齐；修复一键更新完成后未自动打开新版本的问题。";
 
     return Results.Ok(new
     {
