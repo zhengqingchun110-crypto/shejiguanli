@@ -16,12 +16,14 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly ISchedulerRepository _repository;
     private readonly UpdateService _updateService;
+    private readonly SecuritySettingsService _securitySettingsService;
     private static readonly string[] DepartmentNames = ["空间部门", "策划部门", "平面部门", "施工图部门", "工程监理"];
 
-    public MainViewModel(ISchedulerRepository repository, ThemeService themeService, UpdateService updateService)
+    public MainViewModel(ISchedulerRepository repository, ThemeService themeService, UpdateService updateService, SecuritySettingsService securitySettingsService)
     {
         _repository = repository;
         _updateService = updateService;
+        _securitySettingsService = securitySettingsService;
 
         NavigationItems =
         [
@@ -239,14 +241,27 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private DashboardCard? expandedDashboardCard;
 
+    [ObservableProperty]
+    private bool isSettingsOpen;
+
+    [ObservableProperty]
+    private string sensitiveCurrentPassword = string.Empty;
+
+    [ObservableProperty]
+    private string sensitiveNewPassword = string.Empty;
+
+    [ObservableProperty]
+    private string sensitiveConfirmPassword = string.Empty;
+
     public Brush ConnectionIndicatorBrush => IsOnline
         ? new SolidColorBrush(Color.FromRgb(34, 197, 94))
         : new SolidColorBrush(Color.FromRgb(148, 163, 184));
 
-    public Visibility OverviewVisibility => IsMenu("总览") ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility PeopleVisibility => IsMenu("人员管理") ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility ProjectCenterVisibility => IsMenu("项目中心") ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility NonProjectContentVisibility => IsMenu("项目中心") ? Visibility.Collapsed : Visibility.Visible;
+    public Visibility OverviewVisibility => !IsSettingsOpen && IsMenu("总览") ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility PeopleVisibility => !IsSettingsOpen && IsMenu("人员管理") ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ProjectCenterVisibility => !IsSettingsOpen && IsMenu("项目中心") ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility SettingsVisibility => IsSettingsOpen ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility NonProjectContentVisibility => !IsSettingsOpen && IsMenu("项目中心") ? Visibility.Collapsed : Visibility.Visible;
     public Visibility ProjectDetailVisibility => Visibility.Collapsed;
     public Visibility TimelineVisibility => Visibility.Collapsed;
 
@@ -254,11 +269,21 @@ public partial class MainViewModel : ViewModelBase
     partial void OnProjectSearchKeywordChanged(string value) => ApplyProjectFilters();
     partial void OnSelectedProjectSummaryChanged(ProjectSummary? value) => LoadProjectDetail();
     partial void OnExpandedDashboardCardChanged(DashboardCard? value) => OnPropertyChanged(nameof(DashboardDetailVisibility));
+    partial void OnIsSettingsOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(OverviewVisibility));
+        OnPropertyChanged(nameof(PeopleVisibility));
+        OnPropertyChanged(nameof(ProjectCenterVisibility));
+        OnPropertyChanged(nameof(SettingsVisibility));
+        OnPropertyChanged(nameof(NonProjectContentVisibility));
+        OnPropertyChanged(nameof(DashboardDetailVisibility));
+    }
 
-    public Visibility DashboardDetailVisibility => IsMenu("总览") && ExpandedDashboardCard is not null ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility DashboardDetailVisibility => !IsSettingsOpen && IsMenu("总览") && ExpandedDashboardCard is not null ? Visibility.Visible : Visibility.Collapsed;
 
     partial void OnSelectedNavigationChanged(NavigationMenuItem? value)
     {
+        IsSettingsOpen = false;
         OnPropertyChanged(nameof(OverviewVisibility));
         OnPropertyChanged(nameof(PeopleVisibility));
         OnPropertyChanged(nameof(ProjectCenterVisibility));
@@ -393,6 +418,17 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenSettings()
+    {
+        if (!ConfirmSensitivePassword("进入后台设置"))
+        {
+            return;
+        }
+
+        IsSettingsOpen = true;
+    }
+
+    [RelayCommand]
     private void AddEmployee(DepartmentWorkPage? departmentPage)
     {
         if (departmentPage is null || string.IsNullOrWhiteSpace(departmentPage.NewEmployeeName))
@@ -422,6 +458,11 @@ public partial class MainViewModel : ViewModelBase
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!ConfirmSensitivePassword($"删除员工：{employeeGroup.EmployeeName}"))
         {
             return;
         }
@@ -527,6 +568,11 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ExportDepartment(DepartmentWorkPage? departmentPage)
     {
+        if (!ConfirmExport("确定导出当前部门人员排期 PDF 吗？"))
+        {
+            return;
+        }
+
         TryExport(() =>
         {
             var department = string.IsNullOrWhiteSpace(departmentPage?.DepartmentName) ? "人员管理" : departmentPage.DepartmentName.Trim();
@@ -537,6 +583,11 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ExportActiveProjects()
     {
+        if (!ConfirmExport("确定导出当前正在进行的项目 PDF 吗？"))
+        {
+            return;
+        }
+
         TryExport(() =>
         {
             var snapshot = _repository.GetSnapshot();
@@ -552,6 +603,16 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ExportAllProjects()
     {
+        if (!ConfirmExport("确定导出公司所有项目 PDF 吗？"))
+        {
+            return;
+        }
+
+        if (!ConfirmSensitivePassword("导出公司所有项目"))
+        {
+            return;
+        }
+
         TryExport(() =>
         {
             var summaries = BuildProjectSummaries(_repository.GetSnapshot())
@@ -560,6 +621,28 @@ public partial class MainViewModel : ViewModelBase
 
             return PdfExportService.ExportProjectList("公司所有项目", summaries, "项目导出", "公司所有项目");
         });
+    }
+
+    [RelayCommand]
+    private void ExportSelectedProjectDetail()
+    {
+        if (SelectedProjectSummary is null)
+        {
+            return;
+        }
+
+        if (!ConfirmExport($"确定导出“{SelectedProjectSummary.Name}”的项目详情和跟进计划 PDF 吗？"))
+        {
+            return;
+        }
+
+        var project = SelectedProjectSummary;
+        var projectType = EditableProjectType.Trim();
+        var operators = EditableProjectOperators.Trim();
+        var summary = EditableProjectSummary.Trim();
+        var taskPlan = EditableTaskPlanText.Trim();
+
+        TryExport(() => PdfExportService.ExportProjectDetail(project, projectType, operators, summary, taskPlan));
     }
 
     [RelayCommand]
@@ -686,6 +769,37 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ChangeSensitivePassword()
+    {
+        if (string.IsNullOrWhiteSpace(SensitiveCurrentPassword)
+            || string.IsNullOrWhiteSpace(SensitiveNewPassword)
+            || string.IsNullOrWhiteSpace(SensitiveConfirmPassword))
+        {
+            MessageBox.Show("请把当前密码、新密码和确认密码填写完整。", "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!string.Equals(SensitiveNewPassword, SensitiveConfirmPassword, StringComparison.Ordinal))
+        {
+            MessageBox.Show("两次输入的新密码不一致。", "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            _securitySettingsService.ChangeSensitivePassword(SensitiveCurrentPassword, SensitiveNewPassword);
+            SensitiveCurrentPassword = string.Empty;
+            SensitiveNewPassword = string.Empty;
+            SensitiveConfirmPassword = string.Empty;
+            MessageBox.Show("确认密码已更新。", "保存成功", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    [RelayCommand]
     private void DeleteSelectedProject()
     {
         if (SelectedProjectSummary is null)
@@ -699,6 +813,11 @@ public partial class MainViewModel : ViewModelBase
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!ConfirmSensitivePassword($"删除项目：{SelectedProjectSummary.Name}"))
         {
             return;
         }
@@ -1027,6 +1146,33 @@ public partial class MainViewModel : ViewModelBase
         {
             MessageBox.Show($"导出失败：{ex.Message}", "导出失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private static bool ConfirmExport(string message)
+    {
+        var result = MessageBox.Show(
+            message,
+            "确认导出",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        return result == MessageBoxResult.Yes;
+    }
+
+    private bool ConfirmSensitivePassword(string actionName)
+    {
+        var password = AppleDialogService.PromptPassword($"请输入确认密码以继续：{actionName}", "确认密码");
+        if (password is null)
+        {
+            return false;
+        }
+
+        if (_securitySettingsService.VerifySensitivePassword(password))
+        {
+            return true;
+        }
+
+        MessageBox.Show("确认密码不正确。", "验证失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
     }
 
     private static List<ProjectSummary> BuildProjectSummaries(WorkspaceSnapshot snapshot)

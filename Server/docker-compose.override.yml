@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: ./source
+      dockerfile: Server/DecorationProjectScheduler.Api/Dockerfile
+    container_name: shejiguanli-api
+    restart: unless-stopped
+    env_file:
+      - api.env
+    ports:
+      - "80:5000"
+    volumes:
+      - ./app/wwwroot:/app/wwwroot:ro
+    depends_on:
+      postgres:
+        condition: service_healthy

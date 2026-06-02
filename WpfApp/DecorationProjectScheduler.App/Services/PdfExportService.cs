@@ -70,6 +70,68 @@ public static class PdfExportService
             fileNamePrefix);
     }
 
+    public static string ExportProjectDetail(ProjectSummary project, string projectType, string operators, string summary, string taskPlan)
+    {
+        var exportDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "项目导出");
+        Directory.CreateDirectory(exportDirectory);
+
+        var safeName = string.Join("_", project.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+        var filePath = Path.Combine(exportDirectory, $"{safeName}-项目详情-{DateTime.Now:yyyyMMdd-HHmmss}.pdf");
+
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(34);
+                page.DefaultTextStyle(text => text.FontFamily("Microsoft YaHei").FontSize(10).FontColor("#27303F"));
+
+                page.Header().Column(column =>
+                {
+                    column.Item().Text(project.Name).FontSize(24).SemiBold().FontColor("#141821");
+                    column.Item().PaddingTop(6).Text($"导出时间：{DateTime.Now:yyyy-MM-dd HH:mm}").FontSize(9).FontColor("#667085");
+                    column.Item().PaddingTop(12).LineHorizontal(1).LineColor("#DADFE8");
+                });
+
+                page.Content().PaddingTop(18).Column(column =>
+                {
+                    column.Spacing(14);
+                    column.Item().Element(Card).Column(card =>
+                    {
+                        card.Item().Text("基础信息").FontSize(16).SemiBold();
+                        card.Item().PaddingTop(8).Text($"项目类型：{TextOrEmpty(projectType)}");
+                        card.Item().Text($"操作人员：{TextOrEmpty(operators)}");
+                        card.Item().Text($"项目周期：{project.StartDate:yyyy-MM-dd} 至 {project.EndDate:yyyy-MM-dd}");
+                        card.Item().Text($"当前阶段：{TextOrEmpty(project.CurrentStage)}");
+                    });
+
+                    column.Item().Element(Card).Column(card =>
+                    {
+                        card.Item().Text("项目详情").FontSize(16).SemiBold();
+                        card.Item().PaddingTop(8).Text(TextOrEmpty(summary)).LineHeight(1.35f);
+                    });
+
+                    column.Item().Element(Card).Column(card =>
+                    {
+                        card.Item().Text("跟进计划").FontSize(16).SemiBold();
+                        card.Item().PaddingTop(8).Text(TextOrEmpty(taskPlan)).LineHeight(1.35f);
+                    });
+                });
+
+                page.Footer().AlignRight().Text(text =>
+                {
+                    text.Span("第 ");
+                    text.CurrentPageNumber();
+                    text.Span(" 页 / 共 ");
+                    text.TotalPages();
+                    text.Span(" 页");
+                });
+            });
+        }).GeneratePdf(filePath);
+
+        return filePath;
+    }
+
     public static void OpenFile(string filePath)
     {
         Process.Start(new ProcessStartInfo(filePath)
@@ -164,4 +226,13 @@ public static class PdfExportService
             .BorderColor("#E5E9F0")
             .PaddingVertical(7)
             .PaddingHorizontal(6);
+
+    private static IContainer Card(IContainer container) =>
+        container
+            .Background("#F7F8FA")
+            .Border(0.6f)
+            .BorderColor("#E5E9F0")
+            .Padding(16);
+
+    private static string TextOrEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? "空" : value.Trim();
 }

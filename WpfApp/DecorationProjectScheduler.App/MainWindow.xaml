@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:helpers="clr-namespace:DecorationProjectScheduler.App.Helpers"
         xmlns:models="clr-namespace:DecorationProjectScheduler.App.Models;assembly=DecorationProjectScheduler.Shared"
         mc:Ignorable="d"
         Title="凡响智道"
@@ -270,31 +271,43 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Border Grid.Row="2"
-                        Background="{DynamicResource AccentSoftBrush}"
-                        CornerRadius="18"
-                        Padding="14">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Ellipse Width="10"
-                                     Height="10"
-                                     Fill="{Binding ConnectionIndicatorBrush}"
-                                     VerticalAlignment="Center"
-                                     Margin="0,0,8,0" />
-                            <TextBlock Grid.Column="1"
-                                       Text="{Binding ConnectionStatusText}"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}" />
-                        </Grid>
-                        <TextBlock Text="{Binding LastSyncText}"
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" />
-                    </StackPanel>
-                </Border>
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Background="{DynamicResource AccentSoftBrush}"
+                            CornerRadius="18"
+                            Padding="14">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Width="10"
+                                         Height="10"
+                                         Fill="{Binding ConnectionIndicatorBrush}"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,8,0" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ConnectionStatusText}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </Grid>
+                            <TextBlock Text="{Binding LastSyncText}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Button Grid.Column="1"
+                            Content="⚙"
+                            Style="{StaticResource SettingsGearButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Command="{Binding OpenSettingsCommand}" />
+                </Grid>
             </Grid>
         </Border>
 
@@ -514,6 +527,61 @@
                                     ContentTemplate="{StaticResource PeopleDepartmentTemplate}" />
                     </Border>
 
+                    <Border Style="{StaticResource PanelBorderStyle}" Visibility="{Binding SettingsVisibility}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Margin="0,0,0,22">
+                                <TextBlock Text="后台设置"
+                                           FontSize="32"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="管理删除员工、删除项目、导出公司所有项目时使用的确认密码。"
+                                           Margin="0,10,0,0"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                            </StackPanel>
+
+                            <Border Grid.Row="1"
+                                    Background="{DynamicResource AccentSoftBrush}"
+                                    CornerRadius="24"
+                                    Padding="24"
+                                    MaxWidth="620"
+                                    HorizontalAlignment="Left">
+                                <StackPanel>
+                                    <TextBlock Text="敏感操作确认密码"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,16" />
+
+                                    <TextBlock Text="当前密码"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,6" />
+                                    <PasswordBox helpers:PasswordBoxBinder.BoundPassword="{Binding SensitiveCurrentPassword, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,14" />
+
+                                    <TextBlock Text="新密码"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,6" />
+                                    <PasswordBox helpers:PasswordBoxBinder.BoundPassword="{Binding SensitiveNewPassword, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,14" />
+
+                                    <TextBlock Text="确认新密码"
+                                               FontWeight="SemiBold"
+                                               Margin="0,0,0,6" />
+                                    <PasswordBox helpers:PasswordBoxBinder.BoundPassword="{Binding SensitiveConfirmPassword, UpdateSourceTrigger=PropertyChanged}"
+                                                 Margin="0,0,0,20" />
+
+                                    <Button Content="保存密码"
+                                            Width="120"
+                                            HorizontalAlignment="Left"
+                                            Command="{Binding ChangeSensitivePasswordCommand}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Grid>
         </ScrollViewer>
@@ -670,6 +738,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="120" />
                                     </Grid.ColumnDefinitions>
                                     <TextBox Text="{Binding EditableProjectOperators, UpdateSourceTrigger=PropertyChanged}"
                                              Tag="请输入操作人员"
@@ -680,7 +749,11 @@
                                              Margin="0,0,10,0" />
                                     <Button Grid.Column="2"
                                             Content="保存"
+                                            Margin="0,0,10,8"
                                             Command="{Binding SaveProjectDetailCommand}" />
+                                    <Button Grid.Column="3"
+                                            Content="导出PDF"
+                                            Command="{Binding ExportSelectedProjectDetailCommand}" />
                                 </Grid>
 
                                 <Border Background="{DynamicResource PanelBrush}" CornerRadius="20" Padding="18" Margin="0,0,0,16">

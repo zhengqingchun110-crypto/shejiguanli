@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using DecorationProjectScheduler.App.Database;
 using DecorationProjectScheduler.App.Repositories;
@@ -51,12 +51,13 @@ public partial class App : Application
         var themeService = new ThemeService();
         var fileStorageService = new FileStorageService(fileRoot);
         var updateService = new UpdateService(apiBaseUrl);
+        var securitySettingsService = new SecuritySettingsService();
 
         Resources["FileStorageService"] = fileStorageService;
 
         var mainWindow = new MainWindow
         {
-            DataContext = new MainViewModel(repository, themeService, updateService),
+            DataContext = new MainViewModel(repository, themeService, updateService, securitySettingsService),
             Title = string.IsNullOrWhiteSpace(apiBaseUrl)
                 ? "凡响智道 - 本机模式"
                 : "凡响智道 - 云端模式"

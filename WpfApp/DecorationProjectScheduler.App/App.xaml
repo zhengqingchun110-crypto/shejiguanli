@@ -95,6 +95,16 @@
                 <Setter Property="FontSize" Value="15" />
             </Style>
 
+            <Style x:Key="SettingsGearButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                <Setter Property="Width" Value="42" />
+                <Setter Property="Height" Value="42" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="12,0,0,0" />
+                <Setter Property="FontSize" Value="22" />
+                <Setter Property="Background" Value="#E8E8ED" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            </Style>
+
             <Style x:Key="FrostedComboBoxStyle" TargetType="ComboBox">
                 <Setter Property="MinHeight" Value="38" />
                 <Setter Property="Padding" Value="11,7" />
