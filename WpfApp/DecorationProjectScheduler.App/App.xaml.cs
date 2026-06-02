@@ -12,6 +12,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        InstallPendingUpdater();
 
         var appRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DecorationProjectScheduler");
         var databasePath = Path.Combine(appRoot, "Database", "scheduler.db");
@@ -64,5 +65,25 @@ public partial class App : Application
         };
         MainWindow = mainWindow;
         mainWindow.Show();
+    }
+
+    private static void InstallPendingUpdater()
+    {
+        var updaterPath = Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.Updater.exe");
+        var nextUpdaterPath = Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.Updater.next.exe");
+        if (!File.Exists(nextUpdaterPath))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Copy(nextUpdaterPath, updaterPath, true);
+            File.Delete(nextUpdaterPath);
+        }
+        catch
+        {
+            // 下次启动再尝试安装新的更新器，避免影响主程序启动。
+        }
     }
 }

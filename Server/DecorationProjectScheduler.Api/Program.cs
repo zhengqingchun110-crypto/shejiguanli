@@ -1,4 +1,4 @@
-using DecorationProjectScheduler.Api;
+﻿using DecorationProjectScheduler.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,9 +19,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.8";
+    var version = configuration["Update:Version"] ?? "1.0.9";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.8 更新：总览四个大标签改为完全等宽等高并与上方总宽度对齐；修复一键更新完成后未自动打开新版本的问题。";
+    var notes = configuration["Update:Notes"] ?? "1.0.9 更新：修复旧版本一键更新时无法自动替换和重启的问题，并保留总览四个标签等宽对齐。";
 
     return Results.Ok(new
     {

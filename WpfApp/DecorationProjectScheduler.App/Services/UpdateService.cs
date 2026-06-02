@@ -52,6 +52,12 @@ public sealed class UpdateService
         }
 
         var updaterPath = Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.Updater.exe");
+        var nextUpdaterPath = Path.Combine(AppContext.BaseDirectory, "DecorationProjectScheduler.Updater.next.exe");
+        if (!File.Exists(updaterPath) && File.Exists(nextUpdaterPath))
+        {
+            updaterPath = nextUpdaterPath;
+        }
+
         if (!File.Exists(updaterPath))
         {
             throw new InvalidOperationException("没有找到自动更新程序，请使用正式发布版更新。");
