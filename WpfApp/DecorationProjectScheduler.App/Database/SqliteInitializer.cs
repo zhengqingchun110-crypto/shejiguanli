@@ -123,13 +123,7 @@ public sealed class SqliteInitializer
         EnsureColumn(connection, "Projects", "TaskPlan", "TEXT NOT NULL DEFAULT ''");
         NormalizeVisibleEnglish(connection);
 
-        using var countCommand = connection.CreateCommand();
-        countCommand.CommandText = "SELECT COUNT(*) FROM Projects;";
-        var existing = Convert.ToInt32(countCommand.ExecuteScalar());
-        if (existing == 0)
-        {
-            Seed(connection);
-        }
+        // 正式版只负责建表和补字段，不能在更新或换目录时自动写入示例人员/项目。
     }
 
     private static void EnsureColumn(SqliteConnection connection, string tableName, string columnName, string definition)

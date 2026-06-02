@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{507A22
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecorationProjectScheduler.Shared", "Shared\DecorationProjectScheduler.Shared\DecorationProjectScheduler.Shared.csproj", "{6DADFD86-FC28-4172-8548-A8121B5E3386}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DecorationProjectScheduler.Updater", "WpfApp\DecorationProjectScheduler.Updater\DecorationProjectScheduler.Updater.csproj", "{8ED5E443-9117-4EDC-A628-6E95EC110B69}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,10 +38,15 @@ Global
 		{6DADFD86-FC28-4172-8548-A8121B5E3386}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6DADFD86-FC28-4172-8548-A8121B5E3386}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6DADFD86-FC28-4172-8548-A8121B5E3386}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8ED5E443-9117-4EDC-A628-6E95EC110B69}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8ED5E443-9117-4EDC-A628-6E95EC110B69}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8ED5E443-9117-4EDC-A628-6E95EC110B69}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8ED5E443-9117-4EDC-A628-6E95EC110B69}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{CD0F98C7-9BC7-48F6-A1C0-D2A354F3955B} = {CB02E7B1-A6E8-4722-92F9-2F2BAB4DF124}
 		{269D4476-E1DB-49C8-BBC3-0CE5E6A57CC8} = {ADB6A4EC-63C6-41EE-9E04-74DCE4EE94A0}
 		{6DADFD86-FC28-4172-8548-A8121B5E3386} = {507A22D8-F9B2-4A45-BD23-3AE45171FCD3}
+		{8ED5E443-9117-4EDC-A628-6E95EC110B69} = {CB02E7B1-A6E8-4722-92F9-2F2BAB4DF124}
 	EndGlobalSection
 EndGlobal

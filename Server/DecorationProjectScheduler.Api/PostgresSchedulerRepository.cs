@@ -114,17 +114,7 @@ public sealed class PostgresSchedulerRepository
                 completed_at TIMESTAMP NOT NULL
             );
             """);
-
-        var employeeCount = await ScalarAsync<long>(connection, "SELECT COUNT(*) FROM employees;");
-        if (employeeCount == 0)
-        {
-            await ExecuteAsync(connection, """
-                INSERT INTO employees (name, role, department)
-                VALUES ('管理员', '', '空间部门'),
-                       ('设计负责人', '', '策划部门'),
-                       ('施工图负责人', '', '施工图部门');
-                """);
-        }
+        // 正式版只初始化表结构，不自动写入演示员工，避免更新或迁移时污染公司人员数据。
     }
 
     public async Task<WorkspaceSnapshot> GetSnapshotAsync()

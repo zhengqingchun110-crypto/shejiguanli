@@ -402,12 +402,14 @@ public partial class MainViewModel : ViewModelBase
 
             UpdateStatusText = $"发现新版本 {updateInfo.LatestVersion}";
             var message = string.IsNullOrWhiteSpace(updateInfo.Notes)
-                ? $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。是否打开下载页面？"
-                : $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。\n\n更新内容：{updateInfo.Notes}\n\n是否打开下载页面？";
+                ? $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。是否立即更新？"
+                : $"发现新版本 {updateInfo.LatestVersion}，当前版本 {updateInfo.CurrentVersion}。\n\n更新内容：{updateInfo.Notes}\n\n是否立即更新？";
             var result = MessageBox.Show(message, "发现新版本", MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (result == MessageBoxResult.Yes)
             {
-                _updateService.OpenDownload(updateInfo);
+                UpdateStatusText = "正在下载更新";
+                await _updateService.StartAutoUpdateAsync(updateInfo);
+                Application.Current.Shutdown();
             }
         }
         catch (Exception ex)

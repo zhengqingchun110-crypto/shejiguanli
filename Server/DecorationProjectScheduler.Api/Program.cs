@@ -19,9 +19,9 @@ app.MapGet("/", () => Results.Ok(new { status = "ok", name = "凡响智道 API" 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", time = DateTime.Now }));
 app.MapGet("/api/update/latest", (IConfiguration configuration) =>
 {
-    var version = configuration["Update:Version"] ?? "1.0.5";
+    var version = configuration["Update:Version"] ?? "1.0.6";
     var downloadUrl = configuration["Update:DownloadUrl"] ?? "http://47.116.74.183/downloads/DesignScheduler-CloudClient.zip";
-    var notes = configuration["Update:Notes"] ?? "1.0.5 大更新：后台设置改为右下角齿轮入口，进入后台、删除员工、删除项目、导出公司所有项目均加入确认密码；优化 PDF 导出确认、项目详情导出和苹果风弹窗。";
+    var notes = configuration["Update:Notes"] ?? "1.0.6 更新：新增一键自动更新，更新时自动下载、替换并重启；正式版停止自动写入示例人员/项目，避免更新后公司人员数据发生变化。";
 
     return Results.Ok(new
     {
